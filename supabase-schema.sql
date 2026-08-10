@@ -127,4 +127,4 @@ on storage.objects for select
 using (bucket_id = 'listening-audio');
 create policy "users can delete their listening audio"
 on storage.objects for delete to authenticated
-using (bucket_id = 'listening-audio' and owner_id = auth.uid());
+using (bucket_id = 'listening-audio' and owner_id = auth.uid()::text);
