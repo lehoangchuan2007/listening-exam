@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Listening Exam Studio</title>
+<title>English Studio</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
 <script src="config.js"></script>
@@ -11,8 +11,8 @@
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><div><div class="brand">🎧 Listening Exam Studio</div><div class="sub">Tạo đề • Upload Word/MP3 • Thi online • Tự động chấm</div></div><span class="badge">ONLINE</span></div></header>
-<main class="wrap"><div id="app"></div></main><footer>Listening Exam Studio • GitHub Pages + Supabase</footer>
+<header class="top"><div class="wrap"><div><div class="brand">🎧 English Studio</div><div class="sub">Tạo đề • Upload Word/MP3 • Thi online • Tự động chấm</div></div><span class="badge">ONLINE</span></div></header>
+<main class="wrap"><div id="app"></div></main><footer>English Studio • GitHub Pages + Supabase</footer>
 <script>
 const cfg=window.SUPABASE_CONFIG||{};const configured=cfg.url&&cfg.anonKey&&!cfg.url.includes('YOUR_')&&!cfg.anonKey.includes('YOUR_');const sb=configured?supabase.createClient(cfg.url,cfg.anonKey):null;let questions=[],currentExam=null,timer=null;const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function shell(x){$('app').innerHTML=x}function setup(){shell(`<div class="card" style="margin-top:35px"><h2>⚙️ Kết nối cơ sở dữ liệu</h2><p>Website đã có sẵn hệ thống giáo viên, upload MP3, đề online và lưu điểm. Cần kết nối Supabase một lần.</p><ol><li>Tạo project Supabase miễn phí.</li><li>Mở <b>SQL Editor</b> và chạy toàn bộ file <b>supabase-schema.sql</b>.</li><li>Vào <b>Project Settings → API</b>, lấy <b>Project URL</b> và <b>anon public key</b>.</li><li>Mở <b>config.js</b> trên GitHub và thay 2 giá trị mẫu.</li></ol><div class="notice warn"><b>Không dùng service_role key.</b> Chỉ dùng anon/public key.</div><div class="toolbar"><a class="btn" href="https://supabase.com/" target="_blank" style="text-decoration:none">Mở Supabase</a><a class="btn gray" href="https://github.com/lehoangchuan2007/listening-exam/blob/main/supabase-schema.sql" target="_blank" style="text-decoration:none">Mở SQL</a></div></div>`)}
