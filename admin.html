@@ -918,152 +918,223 @@ viewSubmission(b.dataset.subId)
 ========================= */
 
 async function viewSubmission(id){
+  const row = allSubmissions.find(x => String(x.id) === String(id));
+  if (!row) return;
 
-const row=
-allSubmissions.find(
-x=>String(x.id)===String(id)
-);
+  const e = exams.find(x => String(x.id) === String(row.exam_id));
+  const qs = e?.questions || [];
 
-if(!row)return;
+  let answers = row.answers ?? row.student_answers ?? {};
 
-const e=
-exams.find(
-x=>String(x.id)===String(row.exam_id)
-);
+  if (typeof answers === 'string') {
+    try {
+      answers = JSON.parse(answers);
+    } catch {
+      answers = {};
+    }
+  }
 
-let answers=
-row.answers||
-row.student_answers||
-{};
+  let answerKey =
+    row.answer_key ??
+    e?.answer_key ??
+    e?.answers_key ??
+    [];
 
-if(typeof answers==='string'){
+  if (typeof answerKey === 'string') {
+    try {
+      answerKey = JSON.parse(answerKey);
+    } catch {
+      answerKey = [];
+    }
+  }
 
-try{
-answers=JSON.parse(answers)
-}catch{}
+  function normalizeAnswer(value, options) {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
 
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      value.value !== undefined
+    ) {
+      value = value.value;
+    }
+
+    const s = String(value).trim();
+
+    // A/B/C/D
+    if (/^[A-Da-d]$/.test(s)) {
+      return s.toUpperCase().charCodeAt(0) - 65;
+    }
+
+    // 0/1/2/3
+    if (/^\d+$/.test(s)) {
+      return Number(s);
+    }
+
+    // Nội dung đáp án
+    const index = (options || []).findIndex(
+      option =>
+        String(option).trim().toLowerCase() ===
+        s.toLowerCase()
+    );
+
+    return index >= 0 ? index : null;
+  }
+
+  function getCorrectAnswer(question, index) {
+    let correct;
+
+    if (Array.isArray(answerKey)) {
+      correct = answerKey[index];
+    } else if (
+      answerKey &&
+      typeof answerKey === 'object'
+    ) {
+      correct =
+        answerKey[index] ??
+        answerKey[String(index)];
+    }
+
+    if (correct === undefined || correct === null) {
+      correct =
+        question.answer ??
+        question.correct_answer;
+    }
+
+    return normalizeAnswer(
+      correct,
+      question.options || []
+    );
+  }
+
+  let html = `
+    <div
+      class="modal-bg"
+      onclick="if(event.target===this)closeModal()"
+    >
+      <div class="modal">
+
+        <button
+          class="close"
+          onclick="closeModal()"
+        >
+          ✕
+        </button>
+
+        <h2>📋 Chi tiết bài làm</h2>
+
+        <p>
+          <b>Họ tên:</b> ${esc(row.student_name)}
+          <br>
+
+          <b>MSSV:</b> ${esc(row.student_id)}
+          <br>
+
+          <b>Điểm:</b> ${esc(row.score)}
+          •
+          <b>Đúng:</b>
+          ${esc(row.correct_count)}/${esc(row.total_questions)}
+        </p>
+
+        <hr>
+  `;
+
+  qs.forEach((q, i) => {
+
+    const rawGiven =
+      answers?.[String(i)] ??
+      answers?.[i] ??
+      answers?.[q.id];
+
+    const given = normalizeAnswer(
+      rawGiven,
+      q.options || []
+    );
+
+    const correct =
+      getCorrectAnswer(q, i);
+
+    const isCorrect =
+      given !== null &&
+      correct !== null &&
+      given === correct;
+
+    const givenText =
+      given === null
+        ? 'Chưa trả lời'
+        : (
+            q.options?.[given] ??
+            String(given)
+          );
+
+    const correctText =
+      correct === null
+        ? 'Chưa có đáp án'
+        : (
+            q.options?.[correct] ??
+            String(correct)
+          );
+
+    const givenLetter =
+      given !== null
+        ? String.fromCharCode(65 + given)
+        : '';
+
+    const correctLetter =
+      correct !== null
+        ? String.fromCharCode(65 + correct)
+        : '';
+
+    html += `
+      <div class="detail">
+
+        <b>Câu ${i + 1}.</b>
+        ${esc(q.question || q.text || '')}
+
+        <br><br>
+
+        <span
+          class="${isCorrect ? 'correct' : 'wrong'}"
+        >
+          ${isCorrect ? '✅ Đúng' : '❌ Sai'}
+        </span>
+
+        <br>
+
+        Bạn chọn:
+        <b>
+          ${
+            given === null
+              ? 'Chưa trả lời'
+              : `${esc(givenLetter)}. ${esc(givenText)}`
+          }
+        </b>
+
+        <br>
+
+        Đáp án đúng:
+        <b>
+          ${
+            correct === null
+              ? 'Chưa có đáp án'
+              : `${esc(correctLetter)}. ${esc(correctText)}`
+          }
+        </b>
+
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modalRoot').innerHTML =
+    html;
 }
-
-const qs=e?.questions||[];
-
-let html=`
-
-<div
-class="modal-bg"
-onclick="if(event.target===this)closeModal()">
-
-<div class="modal">
-
-<button
-class="close"
-id="closeModalBtn">
-
-✕
-
-</button>
-
-<h2>📋 Chi tiết bài làm</h2>
-
-<p>
-
-<b>Họ tên:</b>
-${esc(row.student_name)}
-
-<br>
-
-<b>MSSV:</b>
-${esc(row.student_id)}
-
-<br>
-
-<b>Điểm:</b>
-${esc(row.score)}
-
-•
-
-<b>Đúng:</b>
-${esc(row.correct_count)}/${esc(row.total_questions)}
-
-</p>
-
-<hr>
-
-`;
-
-qs.forEach((q,i)=>{
-
-const given=
-answers?.[String(i)]??
-answers?.[i]??
-answers?.[q.id]??
-'';
-
-const correct=
-q.answer??
-q.correct_answer??
-'';
-
-const ok=
-String(given)
-.trim()
-.toUpperCase()===
-String(correct)
-.trim()
-.toUpperCase();
-
-html+=`
-
-<div class="detail">
-
-<b>Câu ${i+1}.</b>
-
-${esc(q.question||q.text||'')}
-
-<br>
-
-<span class="${ok?'correct':'wrong'}">
-
-${ok?'✅ Đúng':'❌ Sai'}
-
-</span>
-
-<br>
-
-Đáp án chọn:
-
-<b>
-${esc(given||'Chưa trả lời')}
-</b>
-
-•
-
-Đáp án đúng:
-
-<b>
-${esc(correct)}
-</b>
-
-</div>
-
-`;
-
-});
-
-html+=`
-
-</div>
-
-</div>
-
-`;
-
-document.getElementById('modalRoot').innerHTML=html;
-
-document.getElementById('closeModalBtn')
-.onclick=closeModal;
-
-}
-
 
 function closeModal(){
 
