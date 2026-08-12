@@ -61,13 +61,10 @@
     if (m) return { n: Number(m[1]), text: clean(m[2]) };
     m = line.match(/^Question\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
     if (m) return { n: Number(m[1]), text: clean(m[2]) };
+    // TEST 5.docx uses plain numeric question labels: "1. ...", "2. ..."
+    m = line.match(/^(\d+)\s*[\.)\-:：]\s*(.*)$/i);
+    if (m) return { n: Number(m[1]), text: clean(m[2]) };
     return null;
-  }
-
-  function autoNumberStart(line) {
-    const m = clean(line).match(/^(\d+)\s*[\.)\-:]?\s*(.*)$/);
-    if (!m) return null;
-    return { n: Number(m[1]), text: clean(m[2]) };
   }
 
   function optionMatch(line) {
@@ -108,9 +105,7 @@
         out.push({
           text: clean(cur.text),
           options: cur.options.slice(0, 4),
-          answer: cur.redAnswer !== null
-            ? cur.redAnswer
-            : (cur.fallbackAnswer ?? 0),
+          answer: cur.redAnswer !== null ? cur.redAnswer : (cur.fallbackAnswer ?? 0),
           _red: cur.redAnswer !== null,
           n: cur.n
         });
@@ -122,6 +117,8 @@
       const line = item.text;
       const qs = questionStart(line);
 
+      // A real question line always wins. This is important for files such as
+      // TEST 5.docx, where the first question is literally "1. ...".
       if (qs) {
         finish();
         pendingQuestion = null;
@@ -129,17 +126,7 @@
         continue;
       }
 
-      const auto = item.numbered ? autoNumberStart(line) : null;
-      if (auto) {
-        if (cur && cur.options.some(Boolean)) finish();
-        pendingQuestion = null;
-        startQuestion(auto.n, auto.text);
-        continue;
-      }
-
-      // Word may store the visible "1." as automatic numbering in one
-      // paragraph and put the actual question text in the next paragraph.
-      // Keep that number pending instead of creating a blank question.
+      // Word may store only the visible number in an automatic-numbering paragraph.
       if (item.numbered && isOnlyNumbering(line)) {
         if (cur && cur.options.some(Boolean)) finish();
         pendingQuestion = { n: autoN++ };
@@ -152,7 +139,7 @@
         const idx = 'ABCD'.indexOf(om[1].toUpperCase());
 
         if (idx === 0 && !cur) {
-          startQuestion(pendingQuestion?.n || autoN++, pendingQuestion ? '' : '');
+          startQuestion(pendingQuestion?.n || autoN++, '');
           pendingQuestion = null;
         } else if (idx === 0 && cur && cur.options.some(Boolean)) {
           finish();
@@ -169,9 +156,7 @@
       const am = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|Ans)\s*[:：\-]?\s*([A-Da-d]|[1-4])\s*$/i);
       if (am && cur && cur.redAnswer === null) {
         const v = am[1].toUpperCase();
-        cur.fallbackAnswer = /^[A-D]$/.test(v)
-          ? v.charCodeAt(0) - 65
-          : Number(v) - 1;
+        cur.fallbackAnswer = /^[A-D]$/.test(v) ? v.charCodeAt(0) - 65 : Number(v) - 1;
         continue;
       }
 
@@ -181,21 +166,11 @@
         continue;
       }
 
-      if (!cur) {
-        const numberedText = item.numbered ? autoNumberStart(line) : null;
-        if (numberedText) {
-          startQuestion(numberedText.n, numberedText.text);
-        } else {
-          startQuestion(autoN++, line);
-        }
-        continue;
-      }
+      // Ignore title/instruction paragraphs before the first actual question.
+      if (!cur) continue;
 
       if (cur.options.every(x => !x)) {
         cur.text = clean(cur.text + ' ' + line);
-      } else if (cur.options.every(Boolean)) {
-        finish();
-        startQuestion(autoN++, line);
       }
     }
 
@@ -224,7 +199,6 @@
       window.addQ(parsed[0]);
       first = boxes()[0];
     }
-
     fillExistingQuestion(first, parsed[0]);
 
     for (let i = 1; i < parsed.length; i++) {
@@ -248,7 +222,7 @@
 
       if (!parsed.length) {
         if (status) status.textContent =
-          '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu Câu 1 / đánh số tự động / A. / B. / C. / D.';
+          '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu 1. / 2. / A. / B. / C. / D.';
         return;
       }
 
