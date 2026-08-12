@@ -63,7 +63,7 @@
         if (cur) out.push(cur);
         cur = {
           n: +m[1],
-          text: m[2],
+          text: clean(m[2]),
           options: ['', '', '', ''],
           redAnswer: null
         };
@@ -73,8 +73,21 @@
       m = line.match(/^([ABCD])\s*[\.)\-:]\s*(.*)$/i);
       if (m && cur) {
         const idx = 'ABCD'.indexOf(m[1].toUpperCase());
-        cur.options[idx] = m[2];
+        cur.options[idx] = clean(m[2]);
         if (item.red) cur.redAnswer = idx;
+        continue;
+      }
+
+      // Một số file Word tách "Câu 1." và nội dung câu hỏi thành 2 đoạn.
+      // Nếu câu hiện tại chưa có nội dung, đoạn kế tiếp chính là nội dung câu hỏi.
+      if (cur && !cur.text) {
+        cur.text = line;
+        continue;
+      }
+
+      // Hỗ trợ câu hỏi dài bị Word tách thành nhiều đoạn trước các lựa chọn.
+      if (cur && cur.options.every(x => !x)) {
+        cur.text = clean(cur.text + ' ' + line);
       }
     }
 
@@ -108,9 +121,6 @@
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
-    // Trang tạo đề luôn tạo sẵn 1 câu trống khi mở form.
-    // Giữ lại câu đầu tiên và điền dữ liệu Word vào đó,
-    // thay vì để câu trống thành Câu 1 rồi đẩy dữ liệu Word sang Câu 2.
     while (document.querySelectorAll('#qs .q').length > 1) {
       window.removeQ(0);
     }
@@ -124,7 +134,6 @@
       fillExistingQuestion(first, parsed[0]);
     }
 
-    // Các câu còn lại được thêm bình thường.
     parsed.slice(1).forEach(q => window.addQ({
       text: q.text,
       options: q.options,
