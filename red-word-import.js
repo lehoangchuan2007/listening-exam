@@ -8,9 +8,11 @@
   function isRedRun(run) {
     const color = run.getElementsByTagNameNS('*', 'color')[0];
     if (!color) return false;
-    const v = String(color.getAttribute('w:val') || color.getAttribute('val') || '').toLowerCase().replace('#', '');
+    const v = String(color.getAttribute('w:val') || color.getAttribute('val') || '')
+      .toLowerCase().replace('#', '');
     return v === 'ff0000' || v === 'f00' || v === 'red';
   }
+
   function paragraphData(p) {
     const runs = Array.from(p.getElementsByTagNameNS('*', 'r'));
     let text = '';
@@ -24,6 +26,7 @@
     }
     return { text: clean(text), red };
   }
+
   function loadXml(file) {
     if (!window.JSZip) {
       return new Promise((resolve, reject) => {
@@ -40,20 +43,33 @@
       return entry.async('string');
     });
   }
+
   function parseDocx(xml) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     if (doc.querySelector('parsererror')) throw new Error('File Word không hợp lệ.');
-    const ps = Array.from(doc.getElementsByTagNameNS('*', 'p')).map(paragraphData).filter(x => x.text);
+
+    const ps = Array.from(doc.getElementsByTagNameNS('*', 'p'))
+      .map(paragraphData)
+      .filter(x => x.text);
+
     const out = [];
     let cur = null;
+
     for (const item of ps) {
       const line = item.text;
       let m = line.match(/^(?:Câu\s*)?(\d+)\s*[\.)\-:]\s*(.*)$/i);
+
       if (m) {
         if (cur) out.push(cur);
-        cur = { n: +m[1], text: m[2], options: ['', '', '', ''], redAnswer: null };
+        cur = {
+          n: +m[1],
+          text: m[2],
+          options: ['', '', '', ''],
+          redAnswer: null
+        };
         continue;
       }
+
       m = line.match(/^([ABCD])\s*[\.)\-:]\s*(.*)$/i);
       if (m && cur) {
         const idx = 'ABCD'.indexOf(m[1].toUpperCase());
@@ -61,41 +77,98 @@
         if (item.red) cur.redAnswer = idx;
       }
     }
+
     if (cur) out.push(cur);
+
     return out
       .filter(q => q.text && q.options.every(Boolean))
-      .map(q => ({ text: q.text, options: q.options, answer: q.redAnswer, _red: q.redAnswer !== null, n: q.n }));
+      .map(q => ({
+        text: q.text,
+        options: q.options,
+        answer: q.redAnswer,
+        _red: q.redAnswer !== null,
+        n: q.n
+      }));
   }
+
+  function fillExistingQuestion(box, q) {
+    const text = box.querySelector('.qt');
+    const options = Array.from(box.querySelectorAll('.qo'));
+    const answer = box.querySelector('.qa');
+
+    if (text) text.value = q.text || '';
+    options.forEach((input, j) => {
+      input.value = q.options[j] || '';
+    });
+    if (answer) answer.value = String(q.answer);
+  }
+
   function replaceQuestions(parsed) {
     if (typeof window.removeQ !== 'function' || typeof window.addQ !== 'function') {
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
-    while (document.querySelectorAll('#qs .q').length > 1) window.removeQ(0);
-    if (document.querySelectorAll('#qs .q').length === 1) window.removeQ(0);
-    parsed.forEach(q => window.addQ({ text: q.text, options: q.options, answer: q.answer }));
+
+    // Trang tạo đề luôn tạo sẵn 1 câu trống khi mở form.
+    // Giữ lại câu đầu tiên và điền dữ liệu Word vào đó,
+    // thay vì để câu trống thành Câu 1 rồi đẩy dữ liệu Word sang Câu 2.
+    while (document.querySelectorAll('#qs .q').length > 1) {
+      window.removeQ(0);
+    }
+
+    let first = document.querySelector('#qs .q');
+
+    if (!first) {
+      window.addQ(parsed[0]);
+      first = document.querySelector('#qs .q');
+    } else {
+      fillExistingQuestion(first, parsed[0]);
+    }
+
+    // Các câu còn lại được thêm bình thường.
+    parsed.slice(1).forEach(q => window.addQ({
+      text: q.text,
+      options: q.options,
+      answer: q.answer
+    }));
   }
+
   window.importWord = async function () {
     const f = get('word')?.files?.[0];
     const status = get('wordStatus');
     if (!f) return alert('Chọn file Word trước.');
+
     if (status) status.textContent = '⏳ Đang đọc Word và tìm đáp án màu đỏ...';
+
     try {
       const xml = await loadXml(await f.arrayBuffer());
       const parsed = parseDocx(xml);
+
       if (!parsed.length) {
-        if (status) status.textContent = '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu Câu 1 / A. / B. / C. / D.';
+        if (status) {
+          status.textContent = '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu Câu 1 / A. / B. / C. / D.';
+        }
         return;
       }
+
       const missing = parsed.filter(q => !q._red).map(q => q.n);
       if (missing.length) {
-        if (status) status.innerHTML = `❌ Chưa tìm thấy chữ <b>màu đỏ</b> cho câu: ${missing.join(', ')}. Hãy tô đỏ đúng đáp án trong Word rồi nhập lại.`;
+        if (status) {
+          status.innerHTML = `❌ Chưa tìm thấy chữ <b>màu đỏ</b> cho câu: ${missing.join(', ')}. Hãy tô đỏ đúng đáp án trong Word rồi nhập lại.`;
+        }
         return;
       }
+
       replaceQuestions(parsed);
-      if (status) status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
+
+      if (status) {
+        status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
+      }
     } catch (e) {
       if (status) status.textContent = '❌ ' + (e?.message || e);
     }
   };
-  setTimeout(() => { window.redWordImportEnabled = true; }, 0);
+
+  setTimeout(() => {
+    window.redWordImportEnabled = true;
+  }, 0);
 })();
