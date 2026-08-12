@@ -104,3 +104,13 @@ window.SUPABASE_CONFIG = {
   s.defer=true;
   document.head.appendChild(s);
 })();
+
+// Submission deletion controls for the teacher results page.
+(function(){
+  if(!/results\.html$/.test(location.pathname))return;
+  const s=document.createElement('script');
+  s.id='results-delete-script';
+  s.src='./results-delete.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
