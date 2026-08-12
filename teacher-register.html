@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>English Studio - Đăng ký giáo viên</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}.wrap{max-width:520px;margin:auto;padding:24px 18px}.top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;margin-top:28px;box-shadow:0 6px 24px rgba(15,23,42,.06)}label{display:block;font-weight:700;margin:12px 0 6px}input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px}.btn{border:0;border-radius:10px;padding:11px 14px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;margin-top:16px}.gray{background:#e8eef7;color:#0f172a;margin-left:6px}.muted{color:#64748b;font-size:14px}.msg{margin-top:14px;padding:10px;border-radius:9px;background:#f1f5f9}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><h1>🎧 English Studio</h1><div>👨‍🏫 Tạo tài khoản giáo viên</div></div></header>
+<main class="wrap">
+<div class="card">
+<h2>👨‍🏫 Đăng ký giáo viên</h2>
+<p class="muted">Tài khoản này dùng để tạo và quản lý các đề thi của chính bạn.</p>
+<label>Họ và tên</label><input id="name" placeholder="Nguyễn Văn A">
+<label>Email</label><input id="email" type="email" placeholder="teacher@example.com">
+<label>Mật khẩu</label><input id="password" type="password" minlength="6" placeholder="Ít nhất 6 ký tự">
+<label>Nhập lại mật khẩu</label><input id="password2" type="password" minlength="6">
+<button class="btn" id="register">Đăng ký</button><a class="btn gray" href="./admin.html">← Đăng nhập</a>
+<div id="msg" class="msg muted"></div>
+</div>
+</main>
+<script>
+const cfg=window.SUPABASE_CONFIG||{};
+const sb=supabase.createClient(cfg.url,cfg.anonKey);
+const msg=document.getElementById('msg');
+document.getElementById('register').onclick=async()=>{
+ const name=document.getElementById('name').value.trim();
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ const password2=document.getElementById('password2').value;
+ if(!name||!email||!password)return msg.textContent='❌ Vui lòng nhập đầy đủ thông tin.';
+ if(password.length<6)return msg.textContent='❌ Mật khẩu cần ít nhất 6 ký tự.';
+ if(password!==password2)return msg.textContent='❌ Hai mật khẩu không giống nhau.';
+ msg.textContent='⏳ Đang tạo tài khoản...';
+ const {data,error}=await sb.auth.signUp({email,password,options:{data:{role:'teacher',full_name:name}}});
+ if(error)return msg.textContent='❌ '+error.message;
+ if(data.session){
+   const p=await sb.rpc('create_teacher_profile',{p_full_name:name});
+   if(p.error)return msg.textContent='❌ '+p.error.message;
+   msg.textContent='✅ Đăng ký thành công. Đang chuyển đến Dashboard...';
+   setTimeout(()=>location.href='./admin.html',700);
+ }else{
+   msg.textContent='✅ Tài khoản đã tạo. Hãy xác nhận email nếu Supabase yêu cầu, sau đó đăng nhập tại Dashboard.';
+ }
+};
+</script>
+</body>
+</html>
