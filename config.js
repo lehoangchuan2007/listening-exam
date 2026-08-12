@@ -95,12 +95,23 @@ window.SUPABASE_CONFIG = {
   else start();
 })();
 
-// Security guard: loads after the page scripts and wraps protected teacher functions.
+// Security guard.
 (function(){
   if(document.getElementById('english-studio-security'))return;
   const s=document.createElement('script');
   s.id='english-studio-security';
-  s.src='./security.js?v=2';
+  s.src='./security.js?v=3';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
+
+// Multi-teacher registration helper.
+(function(){
+  if(!/admin\.html$/.test(location.pathname))return;
+  if(document.getElementById('teacher-auth-script'))return;
+  const s=document.createElement('script');
+  s.id='teacher-auth-script';
+  s.src='./teacher-auth.js?v=2';
   s.defer=true;
   document.head.appendChild(s);
 })();
