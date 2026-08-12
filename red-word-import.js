@@ -186,22 +186,27 @@
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
+    // The create page always starts with one blank question. The previous
+    // implementation filled that DOM node and then called addQ(), whose
+    // renderQ() immediately rebuilt the DOM from the old `questions` array,
+    // putting the blank question back. Instead, remove all existing questions
+    // first and rebuild the entire list through the page's own addQ/renderQ API.
     const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
-    while (boxes().length > 1) window.removeQ(boxes().length - 1);
+    while (boxes().length > 0) window.removeQ(boxes().length - 1);
 
-    let first = boxes()[0];
-    if (!first) {
-      window.addQ(parsed[0]);
-      first = boxes()[0];
+    // removeQ() keeps the page from having zero questions by calling addQ().
+    // Remove that auto-created blank one again, then add the parsed questions.
+    let current = boxes();
+    while (current.length > 0) {
+      window.removeQ(current.length - 1);
+      current = boxes();
     }
 
-    fillExistingQuestion(first, parsed[0]);
-
-    for (let i = 1; i < parsed.length; i++) {
+    for (const q of parsed) {
       window.addQ({
-        text: parsed[i].text,
-        options: parsed[i].options,
-        answer: parsed[i].answer
+        text: q.text,
+        options: q.options,
+        answer: q.answer
       });
     }
   }
