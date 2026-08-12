@@ -3,7 +3,7 @@
 // NEVER put a Supabase secret/service_role key in this file.
 window.SUPABASE_CONFIG = {
   url: "https://lllxrjqwmsrapuwkgxdy.supabase.co",
-  anonKey: "sb_publishable_5ixNQl8DbYYZ7juw5oO-MQ_QoB_kwRT"
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsbHhyanF3bXNyYXB1d2tneGR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzYxMjcsImV4cCI6MjEwMTk1MjEyN30.wejKS6WsJfLCnKuA3_ZKm224SIXjZSydSebU_WAVODY"
 };
 
 // Friendly messages for students when the server rejects an unavailable exam.
