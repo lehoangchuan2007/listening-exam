@@ -36,7 +36,8 @@
       if (r.getElementsByTagNameNS('*', 'tab').length) text += '\t';
       if (r.getElementsByTagNameNS('*', 'br').length) text += '\n';
     }
-    return { text: clean(text), red };
+    const numPr = p.getElementsByTagNameNS('*', 'numPr')[0];
+    return { text: clean(text), red, numbered: !!numPr };
   }
 
   function loadXml(file) {
@@ -56,6 +57,18 @@
     });
   }
 
+  function questionStart(line) {
+    let m = line.match(/^C(?:âu|au)\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
+    if (m) return { n: Number(m[1]), text: clean(m[2]) };
+    m = line.match(/^Question\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
+    if (m) return { n: Number(m[1]), text: clean(m[2]) };
+    return null;
+  }
+
+  function optionMatch(line) {
+    return line.match(/^([ABCD])\s*[\.)\-:：]\s*(.*)$/i);
+  }
+
   function parseDocx(xml) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     if (doc.querySelector('parsererror')) throw new Error('File Word không hợp lệ.');
@@ -66,14 +79,16 @@
 
     const out = [];
     let cur = null;
+    let pending = '';
+    let autoN = 1;
 
     function finish() {
       if (!cur) return;
       if (cur.text && cur.options.every(Boolean)) {
         out.push({
-          text: cur.text,
+          text: clean(cur.text),
           options: cur.options.slice(0, 4),
-          answer: cur.redAnswer,
+          answer: cur.redAnswer !== null ? cur.redAnswer : (cur.fallbackAnswer ?? 0),
           _red: cur.redAnswer !== null,
           n: cur.n
         });
@@ -83,92 +98,92 @@
 
     for (const item of ps) {
       const line = item.text;
+      const qs = questionStart(line);
 
-      // IMPORTANT: punctuation after the question number is optional.
-      // Handles all of these Word formats:
-      //   Câu 1.
-      //   Câu 1
-      //   Câu 1: How much is the car?
-      //   Câu 1 - How much is the car?
-      let m = line.match(/^C(?:âu|au)\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
-      if (m) {
+      // Explicit question number: Câu 1., Câu 1, Câu 1:, etc.
+      if (qs) {
         finish();
         cur = {
-          n: Number(m[1]),
-          text: clean(m[2]),
+          n: qs.n,
+          text: qs.text,
           options: ['', '', '', ''],
-          redAnswer: null
+          redAnswer: null,
+          fallbackAnswer: null
         };
+        autoN = Math.max(autoN, qs.n + 1);
         continue;
       }
 
-      // Also accept English question numbering if it appears in a Word file.
-      m = line.match(/^Question\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
-      if (m) {
-        finish();
-        cur = {
-          n: Number(m[1]),
-          text: clean(m[2]),
-          options: ['', '', '', ''],
-          redAnswer: null
-        };
+      const om = optionMatch(line);
+      if (om) {
+        const idx = 'ABCD'.indexOf(om[1].toUpperCase());
+
+        // If Word uses automatic numbering for questions, the question text
+        // itself is stored without "Câu 1" in document.xml. In that case,
+        // the paragraph immediately before A. is the question text.
+        if (idx === 0 && !cur) {
+          cur = {
+            n: autoN++,
+            text: clean(pending),
+            options: ['', '', '', ''],
+            redAnswer: null,
+            fallbackAnswer: null
+          };
+          pending = '';
+        } else if (idx === 0 && cur && cur.options.some(Boolean)) {
+          finish();
+          cur = {
+            n: autoN++,
+            text: clean(pending),
+            options: ['', '', '', ''],
+            redAnswer: null,
+            fallbackAnswer: null
+          };
+          pending = '';
+        }
+
+        if (cur) {
+          cur.options[idx] = clean(om[2]);
+          if (item.red) cur.redAnswer = idx;
+        }
         continue;
       }
 
-      // A. / B. / C. / D. options.
-      m = line.match(/^([ABCD])\s*[\.)\-:：]\s*(.*)$/i);
-      if (m && cur) {
-        const idx = 'ABCD'.indexOf(m[1].toUpperCase());
-        cur.options[idx] = clean(m[2]);
-        if (item.red) cur.redAnswer = idx;
-        continue;
-      }
-
-      // Support an explicit answer line as a fallback, but red text remains preferred.
-      m = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|Ans)\s*[:：\-]?\s*([A-Da-d]|[1-4])\s*$/i);
-      if (m && cur && cur.redAnswer === null) {
-        const v = m[1].toUpperCase();
+      // Explicit answer line is only a fallback. Red text always wins.
+      const am = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|Ans)\s*[:：\-]?\s*([A-Da-d]|[1-4])\s*$/i);
+      if (am && cur && cur.redAnswer === null) {
+        const v = am[1].toUpperCase();
         cur.fallbackAnswer = /^[A-D]$/.test(v) ? v.charCodeAt(0) - 65 : Number(v) - 1;
         continue;
       }
 
-      if (!cur) continue;
-
-      // If "Câu 1" and the question text are separate Word paragraphs,
-      // this paragraph is the question text.
-      if (!cur.text && cur.options.every(x => !x)) {
-        cur.text = line;
+      if (!cur) {
+        pending = clean(pending + ' ' + line);
         continue;
       }
 
-      // A long question can be split over multiple paragraphs before options.
+      // Before the first option, append paragraphs to the question text.
       if (cur.options.every(x => !x)) {
         cur.text = clean(cur.text + ' ' + line);
+      } else if (cur.options.every(Boolean)) {
+        // The next non-option paragraph begins the next question when the
+        // question number was represented by Word's automatic numbering.
+        finish();
+        pending = line;
       }
     }
 
     finish();
 
-    return out
-      .filter(q => q.text && q.options.length === 4 && q.options.every(Boolean))
-      .map(q => ({
-        text: q.text,
-        options: q.options,
-        answer: q.redAnswer !== null ? q.redAnswer : (q.fallbackAnswer ?? 0),
-        _red: q.redAnswer !== null,
-        n: q.n
-      }));
+    return out.filter(q => q.text && q.options.every(Boolean));
   }
 
   function fillExistingQuestion(box, q) {
     const text = box.querySelector('.qt');
     const options = Array.from(box.querySelectorAll('.qo'));
     const answer = box.querySelector('.qa');
-
     if (text) text.value = q.text || '';
-    options.forEach((input, j) => {
-      input.value = q.options[j] || '';
-    });
+    options.forEach((input, j) => { input.value = q.options[j] || ''; });
     if (answer) answer.value = String(q.answer);
   }
 
@@ -177,21 +192,14 @@
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
-    // index.html creates one blank question immediately after opening the
-    // create screen. Reuse that first card for Word question 1, then append
-    // questions 2..N. This prevents the blank-question offset.
     const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
-
-    while (boxes().length > 1) {
-      window.removeQ(boxes().length - 1);
-    }
+    while (boxes().length > 1) window.removeQ(boxes().length - 1);
 
     let first = boxes()[0];
     if (!first) {
       window.addQ(parsed[0]);
       first = boxes()[0];
     }
-
     fillExistingQuestion(first, parsed[0]);
 
     for (let i = 1; i < parsed.length; i++) {
@@ -207,7 +215,6 @@
     const f = get('word')?.files?.[0];
     const status = get('wordStatus');
     if (!f) return alert('Chọn file Word trước.');
-
     if (status) status.textContent = '⏳ Đang đọc Word và tìm đáp án màu đỏ...';
 
     try {
@@ -215,32 +222,23 @@
       const parsed = parseDocx(xml);
 
       if (!parsed.length) {
-        if (status) {
-          status.textContent = '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu Câu 1 / A. / B. / C. / D.';
-        }
+        if (status) status.textContent = '⚠️ Không nhận diện được câu hỏi. Hệ thống hỗ trợ cả Câu 1. / Câu 1 / đánh số tự động của Word, cùng A. / B. / C. / D.';
         return;
       }
 
       const missing = parsed.filter(q => !q._red).map(q => q.n);
       if (missing.length) {
-        if (status) {
-          status.innerHTML = `❌ Chưa tìm thấy chữ <b>màu đỏ</b> cho câu: ${missing.join(', ')}. Hãy tô đỏ đúng đáp án trong Word rồi nhập lại.`;
-        }
+        if (status) status.innerHTML = `❌ Chưa tìm thấy chữ <b>màu đỏ</b> cho câu: ${missing.join(', ')}. Hãy tô đỏ đúng đáp án trong Word rồi nhập lại.`;
         return;
       }
 
       replaceQuestions(parsed);
-
-      if (status) {
-        status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
-      }
+      if (status) status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
     } catch (e) {
       console.error(e);
       if (status) status.textContent = '❌ ' + (e?.message || e);
     }
   };
 
-  setTimeout(() => {
-    window.redWordImportEnabled = true;
-  }, 0);
+  setTimeout(() => { window.redWordImportEnabled = true; }, 0);
 })();
