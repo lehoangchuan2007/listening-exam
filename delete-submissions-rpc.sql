@@ -9,7 +9,7 @@ security definer
 set search_path = public
 as $$
 declare
-  deleted boolean;
+  deleted_count integer;
 begin
   delete from public.submissions s
   where s.id = p_submission_id
@@ -21,8 +21,8 @@ begin
         and e.owner_id = auth.uid()
     );
 
-  get diagnostics deleted = row_count > 0;
-  return deleted;
+  get diagnostics deleted_count = row_count;
+  return deleted_count > 0;
 end;
 $$;
 
