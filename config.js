@@ -62,8 +62,6 @@ window.SUPABASE_CONFIG = {
       },true);
     }
     window.importWord=handler;
-    // Stop watching the whole page once the importer is installed. This avoids
-    // a MutationObserver/renderQ feedback loop that made the page lag/freeze.
     if(observer){observer.disconnect();observer=null;}
     return true;
   }
@@ -73,7 +71,7 @@ window.SUPABASE_CONFIG = {
     scriptLoading=true;
     const s=document.createElement('script');
     s.id='red-word-import-script';
-    s.src='./red-word-import.js?v=6';
+    s.src='./red-word-import.js?v=7';
     s.onload=()=>{scriptLoading=false;bind();};
     s.onerror=()=>{scriptLoading=false;console.error('Không tải được red-word-import.js');};
     document.head.appendChild(s);
