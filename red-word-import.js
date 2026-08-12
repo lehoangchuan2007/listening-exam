@@ -186,8 +186,6 @@
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
-    // The create page creates one empty question immediately. Reuse that
-    // exact first box for parsed question 1; never append question 1 after it.
     const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
     while (boxes().length > 1) window.removeQ(boxes().length - 1);
 
@@ -240,12 +238,24 @@
     }
   }
 
-  // Keep the red-answer importer as the final importWord handler. The main
-  // index.html defines its own importWord(), and depending on script order it
-  // can overwrite this handler. Re-install it after DOMContentLoaded and a few
-  // short delays so the button always uses the XML/color-aware parser.
+  window.redWordImportHandler = importWordHandler;
+
   function installImporter() {
     window.importWord = importWordHandler;
+
+    const button = Array.from(document.querySelectorAll('button'))
+      .find(b => /Đọc Word/i.test(b.textContent || '') || /importWord\s*\(/.test(b.getAttribute('onclick') || ''));
+
+    if (button && button.dataset.redImporterBound !== '1') {
+      button.dataset.redImporterBound = '1';
+      button.removeAttribute('onclick');
+      button.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        importWordHandler();
+      }, true);
+    }
+
     window.redWordImportEnabled = true;
   }
 
