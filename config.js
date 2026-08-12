@@ -47,21 +47,66 @@ window.SUPABASE_CONFIG = {
   });
 })();
 
-// Optional enhancement: on the teacher's create page, replace the plain-text
-// Word importer with a DOCX parser that detects red answer text.
+// Teacher create-page enhancement.
+// IMPORTANT: index.html defines its legacy importWord() before the create form
+// exists. We therefore load the red-DOCX importer only AFTER #word appears,
+// so it overrides the legacy handler instead of being overwritten by it.
 (function(){
   const isCreatePage = /(?:^|\/)index\.html$/.test(location.pathname) || /\/$/.test(location.pathname);
   if(!isCreatePage) return;
-  const load=()=>{
-    if(document.getElementById('red-word-import-script')) return;
+
+  let loading=false;
+
+  function bindRedImporter(){
+    if(typeof window.redWordImportHandler!=='function') return false;
+    window.importWord=window.redWordImportHandler;
+
+    const button=Array.from(document.querySelectorAll('button'))
+      .find(b=>/Đọc Word/i.test(b.textContent||'') || /importWord\s*\(/.test(b.getAttribute('onclick')||''));
+
+    if(button){
+      button.removeAttribute('onclick');
+      if(button.dataset.redImporterBound!=='1'){
+        button.dataset.redImporterBound='1';
+        button.addEventListener('click',function(event){
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          window.redWordImportHandler();
+        },true);
+      }
+    }
+    return true;
+  }
+
+  function loadImporter(){
+    if(loading || document.getElementById('red-word-import-script')) return;
+    loading=true;
     const s=document.createElement('script');
     s.id='red-word-import-script';
-    s.src='./red-word-import.js?v=2';
+    s.src='./red-word-import.js?v=4';
     s.async=false;
-    s.onload=()=>{
-      if(typeof window.redWordImportHandler==='function') window.redWordImportHandler;
+    s.onload=function(){
+      loading=false;
+      bindRedImporter();
     };
+    s.onerror=function(){loading=false;console.error('Không tải được red-word-import.js');};
     document.head.appendChild(s);
-  };
-  setTimeout(load,0);
+  }
+
+  function ensureImporter(){
+    const word=document.getElementById('word');
+    if(!word) return;
+    if(typeof window.redWordImportHandler==='function') bindRedImporter();
+    else loadImporter();
+  }
+
+  function observe(){
+    if(!document.body) return;
+    const observer=new MutationObserver(ensureImporter);
+    observer.observe(document.body,{subtree:true,childList:true});
+    ensureImporter();
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',observe,{once:true});
+  else observe();
 })();
