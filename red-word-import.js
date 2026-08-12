@@ -61,7 +61,6 @@
     if (m) return { n: Number(m[1]), text: clean(m[2]) };
     m = line.match(/^Question\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
     if (m) return { n: Number(m[1]), text: clean(m[2]) };
-    // TEST 5.docx uses plain numeric question labels: "1. ...", "2. ..."
     m = line.match(/^(\d+)\s*[\.)\-:：]\s*(.*)$/i);
     if (m) return { n: Number(m[1]), text: clean(m[2]) };
     return null;
@@ -117,8 +116,6 @@
       const line = item.text;
       const qs = questionStart(line);
 
-      // A real question line always wins. This is important for files such as
-      // TEST 5.docx, where the first question is literally "1. ...".
       if (qs) {
         finish();
         pendingQuestion = null;
@@ -126,7 +123,6 @@
         continue;
       }
 
-      // Word may store only the visible number in an automatic-numbering paragraph.
       if (item.numbered && isOnlyNumbering(line)) {
         if (cur && cur.options.some(Boolean)) finish();
         pendingQuestion = { n: autoN++ };
@@ -137,7 +133,6 @@
       const om = optionMatch(line);
       if (om) {
         const idx = 'ABCD'.indexOf(om[1].toUpperCase());
-
         if (idx === 0 && !cur) {
           startQuestion(pendingQuestion?.n || autoN++, '');
           pendingQuestion = null;
@@ -145,7 +140,6 @@
           finish();
           startQuestion(autoN++, '');
         }
-
         if (cur) {
           cur.options[idx] = clean(om[2]);
           if (item.red) cur.redAnswer = idx;
@@ -166,7 +160,6 @@
         continue;
       }
 
-      // Ignore title/instruction paragraphs before the first actual question.
       if (!cur) continue;
 
       if (cur.options.every(x => !x)) {
@@ -179,6 +172,7 @@
   }
 
   function fillExistingQuestion(box, q) {
+    if (!box || !q) return;
     const text = box.querySelector('.qt');
     const options = Array.from(box.querySelectorAll('.qo'));
     const answer = box.querySelector('.qa');
@@ -191,6 +185,9 @@
     if (typeof window.removeQ !== 'function' || typeof window.addQ !== 'function') {
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
+
+    // The create page creates one empty question immediately. Reuse that
+    // exact first box for parsed question 1; never append question 1 after it.
     const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
     while (boxes().length > 1) window.removeQ(boxes().length - 1);
 
@@ -199,6 +196,7 @@
       window.addQ(parsed[0]);
       first = boxes()[0];
     }
+
     fillExistingQuestion(first, parsed[0]);
 
     for (let i = 1; i < parsed.length; i++) {
@@ -210,7 +208,7 @@
     }
   }
 
-  window.importWord = async function () {
+  async function importWordHandler() {
     const f = get('word')?.files?.[0];
     const status = get('wordStatus');
     if (!f) return alert('Chọn file Word trước.');
@@ -240,7 +238,20 @@
       console.error(e);
       if (status) status.textContent = '❌ ' + (e?.message || e);
     }
-  };
+  }
 
-  setTimeout(() => { window.redWordImportEnabled = true; }, 0);
+  // Keep the red-answer importer as the final importWord handler. The main
+  // index.html defines its own importWord(), and depending on script order it
+  // can overwrite this handler. Re-install it after DOMContentLoaded and a few
+  // short delays so the button always uses the XML/color-aware parser.
+  function installImporter() {
+    window.importWord = importWordHandler;
+    window.redWordImportEnabled = true;
+  }
+
+  installImporter();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installImporter, { once: false });
+  }
+  [0, 50, 200, 500, 1000, 2000].forEach(ms => setTimeout(installImporter, ms));
 })();
