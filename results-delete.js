@@ -7,8 +7,7 @@
 
   async function deleteSubmission(id){
     if(!id)return alert('Không xác định được bài nộp.');
-    const name='sinh viên này';
-    if(!confirm(`⚠️ Bạn có chắc muốn xóa bài nộp của ${name}?\n\nBài làm và kết quả này cũng sẽ không còn xuất hiện ở trang sinh viên.`))return;
+    if(!confirm('⚠️ Bạn có chắc muốn xóa bài nộp này?\n\nBài làm và kết quả này cũng sẽ không còn xuất hiện ở trang sinh viên.'))return;
 
     const {data,error}=await client.rpc('delete_submission',{p_submission_id:id});
     if(error){console.error(error);alert('❌ Không thể xóa bài nộp: '+error.message);return;}
@@ -25,13 +24,13 @@
     const examId=new URLSearchParams(location.search).get('exam')||'';
     if(!examId)return alert('Không xác định được đề thi.');
 
-    const {count,error:countError}=await client.from('submissions').select('id',{count:'exact',head:true}).eq('exam_id',examId);
-    if(countError){alert('❌ Không thể kiểm tra số bài nộp: '+countError.message);return;}
-    if(!count)return alert('📋 Hiện không có bài nộp để xóa.');
+    // Không dùng SELECT COUNT ở client vì quyền RLS có thể làm COUNT trả 0
+    // dù danh sách kết quả đang hiển thị bình thường. RPC sẽ tự kiểm tra quyền
+    // và trả về số dòng thực sự đã xóa.
+    if(!confirm('⚠️ XÓA TẤT CẢ BÀI NỘP CỦA ĐỀ NÀY?\n\nToàn bộ kết quả của đề này sẽ bị xóa và sinh viên sẽ không còn thấy các bài nộp đó.\n\nThao tác này không thể hoàn tác.'))return;
 
-    if(!confirm(`⚠️ XÓA TẤT CẢ ${count} BÀI NỘP?\n\nToàn bộ kết quả của đề này sẽ bị xóa và sinh viên sẽ không còn thấy các bài nộp đó.\n\nThao tác này không thể hoàn tác.`))return;
-    const typed=prompt(`Để xác nhận, nhập chính xác: XOA ${count}`);
-    if(typed!==`XOA ${count}`)return alert('❌ Xác nhận không đúng. Chưa xóa bài nào.');
+    const typed=prompt('Để xác nhận, nhập chính xác: XOA TAT CA');
+    if(typed!=='XOA TAT CA')return alert('❌ Xác nhận không đúng. Chưa xóa bài nào.');
 
     const {data,error}=await client.rpc('delete_exam_submissions',{p_exam_id:examId});
     if(error){console.error(error);alert('❌ Không thể xóa các bài nộp: '+error.message);return;}
