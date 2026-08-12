@@ -3,7 +3,7 @@
 // NEVER put a Supabase secret/service_role key in this file.
 window.SUPABASE_CONFIG = {
   url: "https://lllxrjqwmsrapuwkgxdy.supabase.co",
-  anonKey: "sb_publishable_5ixnQl8DbYYZ7juw5oO-MQ_QoB_kwRT"
+  anonKey: "sb_publishable_5ixNQl8DbYYZ7juw5oO-MQ_QoB_kwRT"
 };
 
 // Friendly messages for students when the server rejects an unavailable exam.
@@ -48,9 +48,6 @@ window.SUPABASE_CONFIG = {
 })();
 
 // Teacher create-page enhancement.
-// IMPORTANT: index.html defines its legacy importWord() before the create form
-// exists. We therefore load the red-DOCX importer only AFTER #word appears,
-// so it overrides the legacy handler instead of being overwritten by it.
 (function(){
   const isCreatePage = /(?:^|\/)index\.html$/.test(location.pathname) || /\/$/.test(location.pathname);
   if(!isCreatePage) return;
@@ -60,10 +57,8 @@ window.SUPABASE_CONFIG = {
   function bindRedImporter(){
     if(typeof window.redWordImportHandler!=='function') return false;
     window.importWord=window.redWordImportHandler;
-
     const button=Array.from(document.querySelectorAll('button'))
       .find(b=>/Đọc Word/i.test(b.textContent||'') || /importWord\s*\(/.test(b.getAttribute('onclick')||''));
-
     if(button){
       button.removeAttribute('onclick');
       if(button.dataset.redImporterBound!=='1'){
@@ -83,12 +78,9 @@ window.SUPABASE_CONFIG = {
     loading=true;
     const s=document.createElement('script');
     s.id='red-word-import-script';
-    s.src='./red-word-import.js?v=4';
+    s.src='./red-word-import.js?v=5';
     s.async=false;
-    s.onload=function(){
-      loading=false;
-      bindRedImporter();
-    };
+    s.onload=function(){loading=false;bindRedImporter();};
     s.onerror=function(){loading=false;console.error('Không tải được red-word-import.js');};
     document.head.appendChild(s);
   }
