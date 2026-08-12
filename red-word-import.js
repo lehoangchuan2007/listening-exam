@@ -4,13 +4,25 @@
   window[SCRIPT_ID] = true;
 
   function get(id) { return document.getElementById(id); }
-  function clean(s) { return String(s || '').replace(/\u00a0/g, ' ').trim(); }
+  function clean(s) {
+    return String(s || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[\u200b\ufeff]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function isRedRun(run) {
     const color = run.getElementsByTagNameNS('*', 'color')[0];
     if (!color) return false;
     const v = String(color.getAttribute('w:val') || color.getAttribute('val') || '')
       .toLowerCase().replace('#', '');
-    return v === 'ff0000' || v === 'f00' || v === 'red';
+    if (v === 'red' || v === 'ff0000' || v === 'f00') return true;
+    if (!/^[0-9a-f]{6}$/.test(v)) return false;
+    const r = parseInt(v.slice(0, 2), 16);
+    const g = parseInt(v.slice(2, 4), 16);
+    const b = parseInt(v.slice(4, 6), 16);
+    return r >= 180 && r > g * 1.5 && r > b * 1.5;
   }
 
   function paragraphData(p) {
@@ -55,14 +67,34 @@
     const out = [];
     let cur = null;
 
+    function finish() {
+      if (!cur) return;
+      if (cur.text && cur.options.every(Boolean)) {
+        out.push({
+          text: cur.text,
+          options: cur.options.slice(0, 4),
+          answer: cur.redAnswer,
+          _red: cur.redAnswer !== null,
+          n: cur.n
+        });
+      }
+      cur = null;
+    }
+
     for (const item of ps) {
       const line = item.text;
-      let m = line.match(/^(?:Câu\s*)?(\d+)\s*[\.)\-:]\s*(.*)$/i);
 
+      // IMPORTANT: punctuation after the question number is optional.
+      // Handles all of these Word formats:
+      //   Câu 1.
+      //   Câu 1
+      //   Câu 1: How much is the car?
+      //   Câu 1 - How much is the car?
+      let m = line.match(/^C(?:âu|au)\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
       if (m) {
-        if (cur) out.push(cur);
+        finish();
         cur = {
-          n: +m[1],
+          n: Number(m[1]),
           text: clean(m[2]),
           options: ['', '', '', ''],
           redAnswer: null
@@ -70,7 +102,21 @@
         continue;
       }
 
-      m = line.match(/^([ABCD])\s*[\.)\-:]\s*(.*)$/i);
+      // Also accept English question numbering if it appears in a Word file.
+      m = line.match(/^Question\s*(\d+)\s*(?:[\.)\-:：]\s*)?(.*)$/i);
+      if (m) {
+        finish();
+        cur = {
+          n: Number(m[1]),
+          text: clean(m[2]),
+          options: ['', '', '', ''],
+          redAnswer: null
+        };
+        continue;
+      }
+
+      // A. / B. / C. / D. options.
+      m = line.match(/^([ABCD])\s*[\.)\-:：]\s*(.*)$/i);
       if (m && cur) {
         const idx = 'ABCD'.indexOf(m[1].toUpperCase());
         cur.options[idx] = clean(m[2]);
@@ -78,27 +124,37 @@
         continue;
       }
 
-      // Một số file Word tách "Câu 1." và nội dung câu hỏi thành 2 đoạn.
-      // Nếu câu hiện tại chưa có nội dung, đoạn kế tiếp chính là nội dung câu hỏi.
-      if (cur && !cur.text) {
+      // Support an explicit answer line as a fallback, but red text remains preferred.
+      m = line.match(/^(?:Đáp\s*án|Dap\s*an|Answer|Ans)\s*[:：\-]?\s*([A-Da-d]|[1-4])\s*$/i);
+      if (m && cur && cur.redAnswer === null) {
+        const v = m[1].toUpperCase();
+        cur.fallbackAnswer = /^[A-D]$/.test(v) ? v.charCodeAt(0) - 65 : Number(v) - 1;
+        continue;
+      }
+
+      if (!cur) continue;
+
+      // If "Câu 1" and the question text are separate Word paragraphs,
+      // this paragraph is the question text.
+      if (!cur.text && cur.options.every(x => !x)) {
         cur.text = line;
         continue;
       }
 
-      // Hỗ trợ câu hỏi dài bị Word tách thành nhiều đoạn trước các lựa chọn.
-      if (cur && cur.options.every(x => !x)) {
+      // A long question can be split over multiple paragraphs before options.
+      if (cur.options.every(x => !x)) {
         cur.text = clean(cur.text + ' ' + line);
       }
     }
 
-    if (cur) out.push(cur);
+    finish();
 
     return out
-      .filter(q => q.text && q.options.every(Boolean))
+      .filter(q => q.text && q.options.length === 4 && q.options.every(Boolean))
       .map(q => ({
         text: q.text,
         options: q.options,
-        answer: q.redAnswer,
+        answer: q.redAnswer !== null ? q.redAnswer : (q.fallbackAnswer ?? 0),
         _red: q.redAnswer !== null,
         n: q.n
       }));
@@ -121,24 +177,30 @@
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
-    while (document.querySelectorAll('#qs .q').length > 1) {
-      window.removeQ(0);
+    // index.html creates one blank question immediately after opening the
+    // create screen. Reuse that first card for Word question 1, then append
+    // questions 2..N. This prevents the blank-question offset.
+    const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
+
+    while (boxes().length > 1) {
+      window.removeQ(boxes().length - 1);
     }
 
-    let first = document.querySelector('#qs .q');
-
+    let first = boxes()[0];
     if (!first) {
       window.addQ(parsed[0]);
-      first = document.querySelector('#qs .q');
-    } else {
-      fillExistingQuestion(first, parsed[0]);
+      first = boxes()[0];
     }
 
-    parsed.slice(1).forEach(q => window.addQ({
-      text: q.text,
-      options: q.options,
-      answer: q.answer
-    }));
+    fillExistingQuestion(first, parsed[0]);
+
+    for (let i = 1; i < parsed.length; i++) {
+      window.addQ({
+        text: parsed[i].text,
+        options: parsed[i].options,
+        answer: parsed[i].answer
+      });
+    }
   }
 
   window.importWord = async function () {
@@ -173,6 +235,7 @@
         status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
       }
     } catch (e) {
+      console.error(e);
       if (status) status.textContent = '❌ ' + (e?.message || e);
     }
   };
