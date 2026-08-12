@@ -171,43 +171,47 @@
     return out.filter(q => q.text && q.options.every(Boolean));
   }
 
-  function fillExistingQuestion(box, q) {
-    if (!box || !q) return;
-    const text = box.querySelector('.qt');
-    const options = Array.from(box.querySelectorAll('.qo'));
-    const answer = box.querySelector('.qa');
-    if (text) text.value = q.text || '';
-    options.forEach((input, j) => { input.value = q.options[j] || ''; });
-    if (answer) answer.value = String(q.answer);
-  }
-
   function replaceQuestions(parsed) {
     if (typeof window.removeQ !== 'function' || typeof window.addQ !== 'function') {
       throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
 
-    // The create page always starts with one blank question. The previous
-    // implementation filled that DOM node and then called addQ(), whose
-    // renderQ() immediately rebuilt the DOM from the old `questions` array,
-    // putting the blank question back. Instead, remove all existing questions
-    // first and rebuild the entire list through the page's own addQ/renderQ API.
     const boxes = () => Array.from(document.querySelectorAll('#qs .q'));
-    while (boxes().length > 0) window.removeQ(boxes().length - 1);
 
-    // removeQ() keeps the page from having zero questions by calling addQ().
-    // Remove that auto-created blank one again, then add the parsed questions.
+    // Keep exactly the initial question card. Removing the last card through
+    // removeQ() when there is only one automatically creates a new blank card,
+    // which caused the old importer to keep an empty Câu 1. Therefore we only
+    // remove cards while there is more than one, then overwrite the first card
+    // with parsed question 1 and append questions 2..n.
     let current = boxes();
-    while (current.length > 0) {
+    while (current.length > 1) {
       window.removeQ(current.length - 1);
       current = boxes();
     }
 
-    for (const q of parsed) {
-      window.addQ({
-        text: q.text,
-        options: q.options,
-        answer: q.answer
-      });
+    if (!current.length) {
+      window.addQ();
+      current = boxes();
+    }
+
+    const first = current[0];
+    const q1 = parsed[0];
+    if (!first || !q1) throw new Error('Không thể tạo Câu 1 từ dữ liệu Word.');
+
+    const text = first.querySelector('.qt');
+    const options = Array.from(first.querySelectorAll('.qo'));
+    const answer = first.querySelector('.qa');
+    if (text) text.value = q1.text || '';
+    options.forEach((input, j) => { input.value = q1.options[j] || ''; });
+    if (answer) answer.value = String(q1.answer);
+
+    // Push the DOM values back into the page's real questions[] array before
+    // addQ() renders the next cards.
+    if (typeof window.syncQ === 'function') window.syncQ();
+
+    for (let i = 1; i < parsed.length; i++) {
+      const q = parsed[i];
+      window.addQ({ text: q.text, options: q.options, answer: q.answer });
     }
   }
 
