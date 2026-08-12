@@ -46,3 +46,19 @@ window.SUPABASE_CONFIG = {
     setTimeout(scan,200);
   });
 })();
+
+// Optional enhancement: on the teacher's create page, replace the plain-text
+// Word importer with a DOCX parser that detects red answer text.
+(function(){
+  const isCreatePage = /(?:^|\/)index\.html$/.test(location.pathname) || /\/$/.test(location.pathname);
+  if(!isCreatePage) return;
+  const load=()=>{
+    if(document.getElementById('red-word-import-script')) return;
+    const s=document.createElement('script');
+    s.id='red-word-import-script';
+    s.src='./red-word-import.js?v=1';
+    s.async=false;
+    document.head.appendChild(s);
+  };
+  setTimeout(load,0);
+})();
