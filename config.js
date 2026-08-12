@@ -94,3 +94,13 @@ window.SUPABASE_CONFIG = {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();
+
+// Security guard: loads after the page scripts and wraps protected teacher functions.
+(function(){
+  if(document.getElementById('english-studio-security'))return;
+  const s=document.createElement('script');
+  s.id='english-studio-security';
+  s.src='./security.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
