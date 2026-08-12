@@ -1,5 +1,4 @@
-/* BƯỚC 12 - Teacher account helper
-   This helper adds registration/profile UI without changing student pages. */
+/* BƯỚC 12 - Teacher account helper */
 (function(){
   if(!/admin\.html$/.test(location.pathname)) return;
   const cfg=window.SUPABASE_CONFIG||{};
@@ -47,7 +46,12 @@
     if(password!==password2){msg.textContent='❌ Hai mật khẩu không giống nhau.';return;}
     if(password.length<6){msg.textContent='❌ Mật khẩu cần ít nhất 6 ký tự.';return;}
 
-    const {data,error}=await client.auth.signUp({email,password});
+    msg.textContent='⏳ Đang tạo tài khoản...';
+    const {data,error}=await client.auth.signUp({
+      email,
+      password,
+      options:{data:{role:'teacher',full_name:name}}
+    });
     if(error){msg.textContent='❌ '+error.message;return;}
 
     if(data.session){
@@ -56,7 +60,7 @@
       msg.textContent='✅ Tạo tài khoản thành công. Đang mở Dashboard...';
       setTimeout(()=>location.reload(),500);
     }else{
-      msg.textContent='✅ Tài khoản đã được tạo. Hãy kiểm tra email để xác nhận tài khoản, sau đó đăng nhập.';
+      msg.textContent='✅ Tài khoản đã được tạo. Hãy kiểm tra email để xác nhận, sau đó đăng nhập bằng tài khoản này.';
     }
   }
 
