@@ -56,8 +56,11 @@ window.SUPABASE_CONFIG = {
     if(document.getElementById('red-word-import-script')) return;
     const s=document.createElement('script');
     s.id='red-word-import-script';
-    s.src='./red-word-import.js?v=1';
+    s.src='./red-word-import.js?v=2';
     s.async=false;
+    s.onload=()=>{
+      if(typeof window.redWordImportHandler==='function') window.redWordImportHandler;
+    };
     document.head.appendChild(s);
   };
   setTimeout(load,0);
