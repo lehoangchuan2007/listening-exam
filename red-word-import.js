@@ -34,7 +34,11 @@
         document.head.appendChild(s);
       }).then(() => loadXml(file));
     }
-    return JSZip.loadAsync(file).then(zip => zip.file('word/document.xml').async('string'));
+    return JSZip.loadAsync(file).then(zip => {
+      const entry = zip.file('word/document.xml');
+      if (!entry) throw new Error('Không tìm thấy nội dung trong file Word.');
+      return entry.async('string');
+    });
   }
   function parseDocx(xml) {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
@@ -42,7 +46,6 @@
     const ps = Array.from(doc.getElementsByTagNameNS('*', 'p')).map(paragraphData).filter(x => x.text);
     const out = [];
     let cur = null;
-    let fallbackKeys = {};
     for (const item of ps) {
       const line = item.text;
       let m = line.match(/^(?:Câu\s*)?(\d+)\s*[\.)\-:]\s*(.*)$/i);
@@ -56,27 +59,20 @@
         const idx = 'ABCD'.indexOf(m[1].toUpperCase());
         cur.options[idx] = m[2];
         if (item.red) cur.redAnswer = idx;
-        continue;
       }
-      m = line.match(/^(?:Đáp\s*án|Answer|Key)\s*(?:câu\s*)?(\d+)\s*[:\-]?\s*([ABCD])/i);
-      if (m) fallbackKeys[+m[1]] = 'ABCD'.indexOf(m[2].toUpperCase());
     }
     if (cur) out.push(cur);
-    return out.map(q => ({
-      text: q.text,
-      options: q.options,
-      answer: q.redAnswer ?? fallbackKeys[q.n] ?? 0,
-      _red: q.redAnswer !== null
-    })).filter(q => q.text && q.options.every(Boolean));
+    return out
+      .filter(q => q.text && q.options.every(Boolean))
+      .map(q => ({ text: q.text, options: q.options, answer: q.redAnswer, _red: q.redAnswer !== null, n: q.n }));
   }
   function replaceQuestions(parsed) {
-    if (typeof window.removeQ === 'function' && typeof window.addQ === 'function') {
-      while (document.querySelectorAll('#qs .q').length > 1) window.removeQ(0);
-      if (document.querySelectorAll('#qs .q').length === 1) window.removeQ(0);
-      parsed.forEach(q => window.addQ({ text: q.text, options: q.options, answer: q.answer }));
-      return;
+    if (typeof window.removeQ !== 'function' || typeof window.addQ !== 'function') {
+      throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
     }
-    throw new Error('Không tìm thấy bộ tạo câu hỏi hiện tại.');
+    while (document.querySelectorAll('#qs .q').length > 1) window.removeQ(0);
+    if (document.querySelectorAll('#qs .q').length === 1) window.removeQ(0);
+    parsed.forEach(q => window.addQ({ text: q.text, options: q.options, answer: q.answer }));
   }
   window.importWord = async function () {
     const f = get('word')?.files?.[0];
@@ -90,11 +86,13 @@
         if (status) status.textContent = '⚠️ Không nhận diện được câu hỏi. Kiểm tra mẫu Câu 1 / A. / B. / C. / D.';
         return;
       }
-      const missing = parsed.filter(q => !q._red).length;
+      const missing = parsed.filter(q => !q._red).map(q => q.n);
+      if (missing.length) {
+        if (status) status.innerHTML = `❌ Chưa tìm thấy chữ <b>màu đỏ</b> cho câu: ${missing.join(', ')}. Hãy tô đỏ đúng đáp án trong Word rồi nhập lại.`;
+        return;
+      }
       replaceQuestions(parsed);
-      if (status) status.innerHTML = missing
-        ? `⚠️ Đã nhập ${parsed.length} câu. Có <b>${missing}</b> câu chưa tìm thấy đáp án màu đỏ; hệ thống tạm dùng đáp án A cho các câu đó.`
-        : `✅ Đã nhập ${parsed.length} câu và tự nhận diện <b>đáp án màu đỏ</b>. Không cần nhập đáp án thủ công.`;
+      if (status) status.innerHTML = `✅ Đã nhập <b>${parsed.length} câu</b> và tự nhận diện đáp án màu đỏ. Không cần nhập đáp án thủ công.`;
     } catch (e) {
       if (status) status.textContent = '❌ ' + (e?.message || e);
     }
