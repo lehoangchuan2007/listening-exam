@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>English Studio - Quản lý Listening</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fb; color: #0f172a; font-family: Inter, system-ui, sans-serif; }
+    .wrap { max-width: 1150px; margin: auto; padding: 22px 18px; }
+    .top { background: linear-gradient(135deg, #172554, #2563eb, #38bdf8); color: #fff; }
+    .card, .exam { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; margin: 15px 0; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { margin: 9px 0; }
+    .field label { display: block; font-weight: 700; margin: 7px 0; }
+    .field input, .field textarea, .field select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; }
+    .field textarea { min-height: 90px; resize: vertical; }
+    .btn { border: 0; border-radius: 9px; padding: 9px 13px; background: #2563eb; color: #fff; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+    .gray { background: #e8eef7; color: #0f172a; }
+    .green { background: #16a34a; }
+    .red { background: #dc2626; }
+    .orange { background: #f59e0b; }
+    .purple { background: #7c3aed; }
+    .muted { color: #64748b; font-size: 14px; }
+    .actions { display: flex; gap: 7px; flex-wrap: wrap; }
+    .badge { display: inline-block; border-radius: 999px; padding: 4px 9px; background: #dcfce7; color: #166534; font-size: 12px; font-weight: 700; }
+    .off { background: #f1f5f9; color: #475569; }
+    .scheduled { background: #fef3c7; color: #92400e; }
+    .closed { background: #fee2e2; color: #991b1b; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 15px 0; }
+    .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 15px; }
+    .stat span { font-size: 13px; color: #64748b; }
+    .stat b { display: block; font-size: 24px; margin-top: 4px; }
+    .modalbg { position: fixed; inset: 0; background: #0008; display: flex; align-items: center; justify-content: center; padding: 15px; z-index: 30; }
+    .modal { background: #fff; border-radius: 16px; padding: 20px; width: min(900px, 100%); max-height: 92vh; overflow: auto; }
+    .close { float: right; border: 0; background: #eef2ff; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+    .qedit { border: 1px solid #dbe3ef; border-radius: 14px; padding: 15px; margin: 12px 0; background: #f8fafc; }
+    .qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .optionrow { display: grid; grid-template-columns: 1fr 120px 40px; gap: 8px; align-items: center; margin: 7px 0; }
+    .optionrow input { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .small { padding: 7px 10px; font-size: 13px; }
+    .notice { padding: 10px; background: #eff6ff; border-radius: 9px; margin: 10px 0; }
+    .type-card { border: 1px solid #dbe3ef; border-radius: 14px; padding: 16px; background: #f8fafc; }
+    @media (max-width: 700px) { .grid, .stats { grid-template-columns: 1fr 1fr; } .optionrow { grid-template-columns: 1fr 95px 38px; } }
+    @media (max-width: 500px) { .grid, .stats { grid-template-columns: 1fr; } .optionrow { grid-template-columns: 1fr; } .optionrow button { width: max-content; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1>🎧 Quản lý đề Listening</h1>
+      <div>Tạo • Chỉnh sửa • Nhân bản • Đóng/mở • Thời gian • Số lần làm</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="app">Đang tải...</div>
+  </main>
+  <div id="modal"></div>
+
+  <script>
+    const cfg = window.SUPABASE_CONFIG || {};
+    const sb = supabase.createClient(cfg.url, cfg.anonKey);
+    const UNLIMITED = 2147483647;
+    const app = document.getElementById('app');
+    const modal = document.getElementById('modal');
+    let exams = [];
+
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+
+    const parse = value => {
+      if (typeof value !== 'string') return value ?? [];
+      try { return JSON.parse(value); } catch { return []; }
+    };
+
+    const questionsOf = exam => Array.isArray(exam?.questions) ? exam.questions : parse(exam?.questions);
+
+    function studentLink(id) {
+      return location.origin + location.pathname.replace(/manage(-listening)?\.html$/, '') +
+        'student.html#exam=' + encodeURIComponent(id);
+    }
+
+    function status(exam) {
+      const now = Date.now();
+      const start = exam.start_at ? new Date(exam.start_at).getTime() : null;
+      const end = exam.end_at ? new Date(exam.end_at).getTime() : null;
+
+      if (!exam.published) return { text: '⚪ Đã đóng', cls: 'off' };
+      if (start && now < start) return { text: '🕐 Chưa đến giờ', cls: 'scheduled' };
+      if (end && now > end) return { text: '🔴 Hết hạn', cls: 'closed' };
+      return { text: '🟢 Đang mở', cls: '' };
+    }
+
+    function attemptsText(exam) {
+      return Number(exam.max_attempts) >= UNLIMITED
+        ? 'Không giới hạn'
+        : 'Tối đa ' + (exam.max_attempts || 1) + ' lần';
+    }
+
+    async function init() {
+      const { data: { session }, error } = await sb.auth.getSession();
+      if (error) return showError(error.message);
+      if (!session) {
+        location.href = './admin.html';
+        return;
+      }
+      load();
+    }
+
+    async function load() {
+      const result = await sb.from('exams')
+        .select('*')
+        .eq('exam_type', 'listening')
+        .order('created_at', { ascending: false });
+
+      if (result.error) {
+        showError(result.error.message);
+        return;
+      }
+
+      exams = result.data || [];
+      render();
+    }
+
+    function showError(message) {
+      app.innerHTML = `
+        <div class="card">
+          <h2>⚠️ Không tải được danh sách đề</h2>
+          <div class="notice">${esc(message)}</div>
+          <button class="btn gray" onclick="load()">↻ Thử lại</button>
+        </div>`;
+    }
+
+    function render() {
+      const open = exams.filter(e => status(e).text === '🟢 Đang mở').length;
+
+      app.innerHTML = `
+        <div class="row">
+          <div>
+            <h2>🎧 Danh sách đề Listening</h2>
+            <div class="muted">Giao diện này chỉ quản lý đề Listening. Reading được tạo ở trang riêng.</div>
+          </div>
+          <div class="actions">
+            <a class="btn gray" href="./admin.html">← Dashboard</a>
+            <button class="btn" onclick="createExam()">＋ Tạo đề Listening</button>
+            <a class="btn green" href="./reading-manage.html">📖 Tạo đề Reading</a>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>📝 Tổng đề Listening</span><b>${exams.length}</b></div>
+          <div class="stat"><span>🟢 Đang mở</span><b>${open}</b></div>
+          <div class="stat"><span>🔒 Đã đóng</span><b>${exams.filter(e => !e.published).length}</b></div>
+          <div class="stat"><span>🕐 Có lịch thi</span><b>${exams.filter(e => e.start_at || e.end_at).length}</b></div>
+        </div>
+
+        ${exams.length ? exams.map(card).join('') : '<div class="card">Chưa có đề Listening.</div>'}
+      `;
+    }
+
+    function card(exam) {
+      const s = status(exam);
+      const time = (exam.start_at ? new Date(exam.start_at).toLocaleString('vi-VN') : 'Ngay lập tức') +
+        ' → ' + (exam.end_at ? new Date(exam.end_at).toLocaleString('vi-VN') : 'Không giới hạn');
+
+      return `
+        <div class="exam">
+          <div class="row">
+            <div style="min-width:260px;flex:1">
+              <h3 style="margin:0 0 6px">${esc(exam.title || 'Không tên')}</h3>
+              <div class="muted">
+                ${questionsOf(exam).length} câu • ${exam.duration_minutes || 0} phút • ${esc(attemptsText(exam))}
+              </div>
+              <div style="margin-top:8px"><span class="badge ${s.cls}">${s.text}</span></div>
+              <div class="muted" style="margin-top:7px">🕐 ${esc(time)}</div>
+            </div>
+            <div class="actions">
+              <button class="btn gray" onclick="edit('${exam.id}')">✏️ Sửa</button>
+              <button class="btn" onclick="duplicateExam('${exam.id}')">📑 Nhân bản</button>
+              <button class="btn orange" onclick="toggle('${exam.id}')">${exam.published ? '🔒 Đóng' : '🔓 Mở'}</button>
+              <button class="btn purple" onclick="copyLink('${exam.id}')">🔗 Link học sinh</button>
+              <a class="btn gray" href="./results.html?exam=${encodeURIComponent(exam.id)}">📊 Kết quả</a>
+              <button class="btn red" onclick="removeExam('${exam.id}')">🗑️ Xóa</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function createExam() {
+      modal.innerHTML = `
+        <div class="modalbg">
+          <div class="modal">
+            <button class="close" onclick="closeModal()">✕</button>
+            <h2>＋ Tạo đề Listening</h2>
+
+            <div class="notice">
+              🎧 Đây là form <b>Listening</b> cũ. Phần Reading không nằm chung trong form này.
+            </div>
+
+            <div class="field">
+              <label>Tên đề *</label>
+              <input id="ctitle" placeholder="Ví dụ: Listening Test 01">
+            </div>
+
+            <div class="field">
+              <label>Mô tả</label>
+              <textarea id="cdesc" placeholder="Mô tả ngắn về đề..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>🎧 Audio URL</label>
+              <input id="caudio" placeholder="https://.../audio.mp3">
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label>Thời gian làm bài (phút)</label>
+                <input id="cmin" type="number" min="1" value="30">
+              </div>
+              <div class="field">
+                <label>Số lần làm tối đa</label>
+                <select id="cmax">
+                  <option value="1">1 lần</option>
+                  <option value="2">2 lần</option>
+                  <option value="3">3 lần</option>
+                  <option value="5">5 lần</option>
+                  <option value="10">10 lần</option>
+                  <option value="2147483647">♾️ Không giới hạn</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label>Mở từ</label>
+                <input id="cstart" type="datetime-local">
+              </div>
+              <div class="field">
+                <label>Đóng lúc</label>
+                <input id="cend" type="datetime-local">
+              </div>
+            </div>
+
+            <div class="row">
+              <h3>📝 Câu hỏi</h3>
+              <button class="btn green" onclick="addQuestion()">＋ Thêm câu</button>
+            </div>
+            <div id="questionsEditor"></div>
+
+            <div class="actions" style="margin-top:16px">
+              <button class="btn" onclick="saveNew()">💾 Tạo đề</button>
+              <button class="btn gray" onclick="closeModal()">Hủy</button>
+            </div>
+          </div>
+        </div>`;
+
+      addQuestion();
+    }
+
+    function questionEditor(q, index) {
+      const options = Array.isArray(q.options) ? q.options : ['', '', '', ''];
+      let answer = q.answer ?? q.correct_answer ?? 0;
+      if (typeof answer === 'string' && /^[A-Da-d]$/.test(answer)) {
+        answer = answer.toUpperCase().charCodeAt(0) - 65;
+      }
+
+      return `
+        <div class="qedit">
+          <div class="qhead">
+            <b>Câu ${index + 1}</b>
+            <button class="btn red small" onclick="this.closest('.qedit').remove();renumber()">🗑️ Xóa câu</button>
+          </div>
+
+          <div class="field">
+            <label>Nội dung câu hỏi</label>
+            <textarea class="qtext">${esc(q.text ?? q.question ?? '')}</textarea>
+          </div>
+
+          <label><b>Các lựa chọn</b></label>
+          ${options.map((option, i) => `
+            <div class="optionrow">
+              <input class="qopt" value="${esc(option)}" placeholder="Đáp án ${String.fromCharCode(65 + i)}">
+              <select class="qcorrect">
+                <option value="0" ${Number(answer) === i ? 'selected' : ''}>Đáp án đúng</option>
+                <option value="1" ${Number(answer) !== i ? 'selected' : ''}>Không đúng</option>
+              </select>
+              <button class="btn red small" onclick="this.parentElement.remove()">×</button>
+            </div>`).join('')}
+
+          <button class="btn gray small" onclick="addOption(this)">＋ Thêm lựa chọn</button>
+        </div>`;
+    }
+
+    function addQuestion() {
+      const box = document.getElementById('questionsEditor');
+      if (!box) return;
+      const index = box.querySelectorAll('.qedit').length;
+      box.insertAdjacentHTML('beforeend', questionEditor({
+        text: '', options: ['', '', '', ''], answer: 0
+      }, index));
+      renumber();
+    }
+
+    function addOption(button) {
+      const box = button.closest('.qedit');
+      const n = box.querySelectorAll('.optionrow').length;
+      const row = document.createElement('div');
+      row.className = 'optionrow';
+      row.innerHTML = `
+        <input class="qopt" placeholder="Đáp án ${String.fromCharCode(65 + n)}">
+        <select class="qcorrect">
+          <option value="0">Đáp án đúng</option>
+          <option value="1" selected>Không đúng</option>
+        </select>
+        <button class="btn red small" onclick="this.parentElement.remove()">×</button>`;
+      box.insertBefore(row, button);
+    }
+
+    function renumber() {
+      document.querySelectorAll('#questionsEditor .qedit').forEach((box, i) => {
+        box.querySelector('.qhead b').textContent = 'Câu ' + (i + 1);
+      });
+    }
+
+    function collectQuestions() {
+      const result = [];
+      let valid = true;
+
+      document.querySelectorAll('#questionsEditor .qedit').forEach(box => {
+        const text = box.querySelector('.qtext').value.trim();
+        const options = [...box.querySelectorAll('.qopt')].map(input => input.value.trim());
+        const selects = [...box.querySelectorAll('.qcorrect')];
+        const answer = selects.findIndex(select => select.value === '0');
+
+        if (!text || options.length < 2 || options.some(x => !x) || answer < 0) {
+          valid = false;
+        }
+
+        result.push({ text, options, answer });
+      });
+
+      return valid ? result : null;
+    }
+
+    async function saveNew() {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return alert('❌ Phiên đăng nhập đã hết.');
+
+      const title = document.getElementById('ctitle').value.trim();
+      const description = document.getElementById('cdesc').value;
+      const audioUrl = document.getElementById('caudio').value.trim();
+      const duration = Math.max(1, Number(document.getElementById('cmin').value) || 30);
+      const maxAttempts = Number(document.getElementById('cmax').value) || 1;
+      const start = document.getElementById('cstart').value;
+      const end = document.getElementById('cend').value;
+      const questions = collectQuestions();
+
+      if (!title) return alert('Tên đề không được trống.');
+      if (!audioUrl) return alert('Vui lòng nhập Audio URL.');
+      if (!questions || !questions.length) return alert('⚠️ Kiểm tra lại câu hỏi.');
+      if (start && end && new Date(end) <= new Date(start)) {
+        return alert('Thời gian đóng phải sau thời gian mở.');
+      }
+
+      const payload = {
+        owner_id: user.id,
+        exam_type: 'listening',
+        title,
+        description,
+        audio_url: audioUrl,
+        duration_minutes: duration,
+        max_attempts: maxAttempts,
+        start_at: start ? new Date(start).toISOString() : null,
+        end_at: end ? new Date(end).toISOString() : null,
+        questions,
+        answer_key: questions.map(q => q.answer),
+        published: false
+      };
+
+      const result = await sb.from('exams').insert(payload);
+      if (result.error) return alert('❌ ' + result.error.message);
+
+      closeModal();
+      await load();
+      alert('✅ Đã tạo đề Listening.');
+    }
+
+    function localInput(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      const pad = n => String(n).padStart(2, '0');
+      return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+        'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+    }
+
+    function edit(id) {
+      const exam = exams.find(x => String(x.id) === String(id));
+      if (!exam) return;
+
+      let questions = questionsOf(exam);
+      const answerKey = Array.isArray(exam.answer_key) ? exam.answer_key : parse(exam.answer_key);
+      questions = questions.map((q, i) => ({
+        ...q,
+        answer: q.answer ?? q.correct_answer ?? answerKey[i] ?? 0
+      }));
+
+      const unlimited = Number(exam.max_attempts) >= UNLIMITED;
+
+      modal.innerHTML = `
+        <div class="modalbg">
+          <div class="modal">
+            <button class="close" onclick="closeModal()">✕</button>
+            <h2>✏️ Chỉnh sửa đề Listening</h2>
+
+            <div class="field">
+              <label>Tên đề</label>
+              <input id="et" value="${esc(exam.title)}">
+            </div>
+
+            <div class="field">
+              <label>Mô tả</label>
+              <textarea id="ed">${esc(exam.description || '')}</textarea>
+            </div>
+
+            <div class="field">
+              <label>🎧 Audio URL</label>
+              <input id="eaudio" value="${esc(exam.audio_url || '')}">
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label>Thời gian làm bài (phút)</label>
+                <input id="emin" type="number" min="1" value="${exam.duration_minutes || 30}">
+              </div>
+              <div class="field">
+                <label>Số lần làm tối đa / sinh viên</label>
+                <select id="emax">
+                  ${[1,2,3,5,10].map(n => `<option value="${n}" ${!unlimited && Number(exam.max_attempts || 1) === n ? 'selected' : ''}>${n} lần</option>`).join('')}
+                  <option value="${UNLIMITED}" ${unlimited ? 'selected' : ''}>♾️ Không giới hạn</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Mở từ</label>
+                <input id="est" type="datetime-local" value="${localInput(exam.start_at)}">
+              </div>
+              <div class="field">
+                <label>Đóng lúc</label>
+                <input id="eet" type="datetime-local" value="${localInput(exam.end_at)}">
+              </div>
+            </div>
+
+            <div class="notice">♾️ Chọn <b>Không giới hạn</b> để sinh viên có thể làm lại không giới hạn số lần.</div>
+
+            <div class="row">
+              <h3>📝 Nội dung câu hỏi</h3>
+              <button class="btn green" onclick="addQuestion()">＋ Thêm câu</button>
+            </div>
+            <div id="questionsEditor">
+              ${questions.map((q, i) => questionEditor(q, i)).join('')}
+            </div>
+
+            <div class="actions" style="margin-top:16px">
+              <button class="btn" onclick="saveFull('${exam.id}')">💾 Lưu toàn bộ đề</button>
+              <button class="btn gray" onclick="closeModal()">Hủy</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function saveFull(id) {
+      const title = document.getElementById('et').value.trim();
+      const description = document.getElementById('ed').value;
+      const audioUrl = document.getElementById('eaudio').value.trim();
+      const duration = Math.max(1, Number(document.getElementById('emin').value) || 30);
+      const maxAttempts = Math.max(1, Number(document.getElementById('emax').value) || 1);
+      const start = document.getElementById('est').value;
+      const end = document.getElementById('eet').value;
+      const questions = collectQuestions();
+
+      if (!title) return alert('Tên đề không được trống.');
+      if (!audioUrl) return alert('Audio URL không được trống.');
+      if (!questions) return alert('⚠️ Kiểm tra lại câu hỏi.');
+      if (end && start && new Date(end) <= new Date(start)) {
+        return alert('Thời gian đóng phải sau thời gian mở.');
+      }
+
+      const result = await sb.from('exams').update({
+        title,
+        description,
+        audio_url: audioUrl,
+        duration_minutes: duration,
+        max_attempts: maxAttempts,
+        start_at: start ? new Date(start).toISOString() : null,
+        end_at: end ? new Date(end).toISOString() : null,
+        questions,
+        answer_key: questions.map(q => q.answer)
+      }).eq('id', id);
+
+      if (result.error) return alert('❌ ' + result.error.message);
+      closeModal();
+      await load();
+      alert('✅ Đã lưu toàn bộ đề.');
+    }
+
+    async function duplicateExam(id) {
+      const source = exams.find(x => String(x.id) === String(id));
+      if (!source) return;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return alert('❌ Phiên đăng nhập đã hết.');
+
+      const copy = {
+        owner_id: user.id,
+        exam_type: 'listening',
+        title: (source.title || 'Listening') + ' - Bản sao',
+        description: source.description || '',
+        audio_url: source.audio_url || '',
+        duration_minutes: source.duration_minutes || 30,
+        max_attempts: source.max_attempts || 1,
+        questions: questionsOf(source),
+        answer_key: Array.isArray(source.answer_key) ? source.answer_key : parse(source.answer_key),
+        published: false,
+        start_at: null,
+        end_at: null
+      };
+
+      const result = await sb.from('exams').insert(copy);
+      if (result.error) return alert('❌ ' + result.error.message);
+      await load();
+      alert('✅ Đã nhân bản đề.');
+    }
+
+    async function toggle(id) {
+      const exam = exams.find(x => String(x.id) === String(id));
+      if (!exam) return;
+      const next = !exam.published;
+
+      if (next && exam.end_at && new Date(exam.end_at) <= new Date()) {
+        return alert('Đề đã quá thời gian đóng.');
+      }
+
+      const result = await sb.from('exams').update({ published: next }).eq('id', id);
+      if (result.error) return alert('❌ ' + result.error.message);
+      await load();
+    }
+
+    async function removeExam(id) {
+      if (!confirm('Xóa đề Listening này?')) return;
+      const result = await sb.from('exams').delete().eq('id', id);
+      if (result.error) return alert('❌ ' + result.error.message);
+      await load();
+      alert('✅ Đã xóa đề.');
+    }
+
+    async function copyLink(id) {
+      const link = studentLink(id);
+      try {
+        await navigator.clipboard.writeText(link);
+        alert('✅ Đã copy link học sinh!\n\n' + link);
+      } catch {
+        prompt('Copy link:', link);
+      }
+    }
+
+    function closeModal() {
+      modal.innerHTML = '';
+    }
+
+    init();
+  </script>
+</body>
+</html>
