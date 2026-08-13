@@ -46,6 +46,8 @@
     let sb = null;
     let exams = [];
     let submissions = [];
+    let currentSession = null;
+    let authListenerReady = false;
 
     const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (m) => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -60,12 +62,14 @@
       if (value === undefined || value === null || value === '') return null;
       const s = String(value).trim();
       if (/^[A-Da-d]$/.test(s)) return s.toUpperCase().charCodeAt(0) - 65;
+      if (/^[A-Da-d][.)]$/.test(s)) return s.toUpperCase().charAt(0).charCodeAt(0) - 65;
       if (/^\d+$/.test(s)) return Number(s);
       return null;
     }
 
     function getQuestions(exam) {
-      return parseJson(exam?.questions ?? exam?.question, []);
+      const q = parseJson(exam?.questions ?? exam?.question, []);
+      return Array.isArray(q) ? q : [];
     }
 
     function getAnswerKey(exam) {
@@ -100,66 +104,149 @@
       app.innerHTML = `<div class="card"><h2>⚠️ Không tải được Dashboard</h2><div class="error">${esc(message)}</div><p class="muted">Hãy thử Ctrl + F5. Nếu vẫn lỗi, báo mình nội dung thông báo này.</p></div>`;
     }
 
-    function authView() {
+    function authView(message = '') {
       app.innerHTML = `
         <div class="auth card">
           <h2>🔐 Đăng nhập giáo viên</h2>
-          <div class="field"><label>Email</label><input id="loginEmail" type="email"></div>
-          <div class="field"><label>Mật khẩu</label><input id="loginPassword" type="password"></div>
+          <div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div>
+          <div class="field"><label>Mật khẩu</label><input id="loginPassword" type="password" autocomplete="current-password"></div>
           <button class="btn" id="loginButton">Đăng nhập</button>
-          <p id="loginMessage" class="muted"></p>
+          <p id="loginMessage" class="muted">${esc(message)}</p>
         </div>`;
       document.getElementById('loginButton').onclick = login;
+      document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') login();
+      });
     }
 
     async function login() {
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
+      const message = document.getElementById('loginMessage');
+      message.textContent = '⏳ Đang đăng nhập...';
+
       const result = await sb.auth.signInWithPassword({ email, password });
       if (result.error) {
-        document.getElementById('loginMessage').textContent = '❌ ' + result.error.message;
+        message.textContent = '❌ ' + result.error.message;
         return;
       }
-      await loadDashboard();
+
+      await loadDashboard(result.data?.session || null);
     }
 
-    function dashboardShell() {
+    async function getTeacherProfile(session) {
+      if (!session?.user?.id) return null;
+
+      const result = await sb
+        .from('teacher_profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (result.error) throw result.error;
+      return result.data || null;
+    }
+
+    async function dashboardShell(session, profile) {
+      const teacherName =
+        profile?.full_name ||
+        profile?.name ||
+        profile?.teacher_name ||
+        session.user.user_metadata?.full_name ||
+        session.user.email ||
+        'Giáo viên';
+
+      const teacherEmail = profile?.email || session.user.email || '';
+
       app.innerHTML = `
+        <div class="card" style="margin-top:0">
+          <div class="row">
+            <div>
+              <div class="muted">👨‍🏫 Giáo viên đang đăng nhập</div>
+              <h2 style="margin:4px 0">${esc(teacherName)}</h2>
+              <div class="muted">📧 ${esc(teacherEmail)}</div>
+            </div>
+            <div class="toolbar">
+              <span class="badge">🟢 Đang đăng nhập</span>
+              <button class="btn red" id="logoutButton">🚪 Đăng xuất</button>
+            </div>
+          </div>
+        </div>
+
         <div class="row">
-          <div><h2>📊 Bảng điều khiển</h2></div>
+          <div>
+            <h2>📊 Bảng điều khiển</h2>
+            <div class="muted">Quản lý các đề thi của ${esc(teacherName)}</div>
+          </div>
           <div class="toolbar">
             <a class="btn" href="./manage.html">＋ Tạo đề</a>
             <a class="btn green" href="./manage.html">⚙️ Quản lý đề</a>
             <button class="btn gray" id="refreshButton">↻ Làm mới</button>
-            <button class="btn red" id="logoutButton">Đăng xuất</button>
           </div>
         </div>
         <div id="summary"></div>
         <div id="dashboardContent"></div>
         <div id="examList"></div>`;
 
-      document.getElementById('refreshButton').onclick = loadDashboard;
+      document.getElementById('refreshButton').onclick = () => loadDashboard();
       document.getElementById('logoutButton').onclick = logout;
     }
 
-    async function loadDashboard() {
+    async function loadDashboard(sessionOverride = null) {
       try {
-        dashboardShell();
+        const sessionResult = sessionOverride
+          ? { data: { session: sessionOverride }, error: null }
+          : await sb.auth.getSession();
 
-        const examResult = await sb.from('exams').select('*').order('created_at', { ascending:false });
+        if (sessionResult.error) throw sessionResult.error;
+
+        const session = sessionResult.data?.session;
+        if (!session) {
+          currentSession = null;
+          authView();
+          return;
+        }
+
+        currentSession = session;
+
+        // 12.6: chỉ tài khoản có hồ sơ trong teacher_profiles mới được vào Dashboard.
+        const profile = await getTeacherProfile(session);
+
+        if (!profile) {
+          currentSession = null;
+          await sb.auth.signOut();
+          authView('🚫 Tài khoản này không có quyền truy cập Dashboard giáo viên.');
+          return;
+        }
+
+        await dashboardShell(session, profile);
+
+        const examResult = await sb
+          .from('exams')
+          .select('*')
+          .order('created_at', { ascending: false });
+
         if (examResult.error) throw examResult.error;
         exams = examResult.data || [];
 
         const all = [];
         for (const exam of exams) {
-          const result = await sb.from('submissions').select('*').eq('exam_id', exam.id);
+          const result = await sb
+            .from('submissions')
+            .select('*')
+            .eq('exam_id', exam.id);
+
           if (result.error) throw result.error;
-          for (const submission of (result.data || [])) all.push(recalculate(submission, exam));
+          for (const submission of (result.data || [])) {
+            all.push(recalculate(submission, exam));
+          }
         }
+
         submissions = all;
         renderDashboard();
         renderExamList();
       } catch (error) {
+        console.error('loadDashboard error:', error);
         showError(error?.message || String(error));
       }
     }
@@ -273,20 +360,49 @@
     }
 
     async function logout() {
-      await sb.auth.signOut();
-      authView();
+      try {
+        const { error } = await sb.auth.signOut();
+        if (error) {
+          alert('❌ Không thể đăng xuất: ' + error.message);
+          return;
+        }
+        currentSession = null;
+        exams = [];
+        submissions = [];
+        authView();
+      } catch (error) {
+        alert('❌ Lỗi đăng xuất: ' + (error?.message || error));
+      }
     }
 
     async function init() {
       if (!window.supabase) return showError('Không tải được thư viện Supabase. Hãy thử Ctrl + F5.');
       if (!cfg.url || !cfg.anonKey) return showError('Thiếu cấu hình Supabase trong config.js.');
+
       try {
         sb = window.supabase.createClient(cfg.url, cfg.anonKey);
+
+        if (!authListenerReady) {
+          authListenerReady = true;
+          sb.auth.onAuthStateChange((event, session) => {
+            console.log('Auth event:', event);
+
+            if (event === 'SIGNED_OUT') {
+              currentSession = null;
+              exams = [];
+              submissions = [];
+              authView();
+            }
+          });
+        }
+
         const { data, error } = await sb.auth.getSession();
         if (error) throw error;
-        if (data?.session) await loadDashboard();
+
+        if (data?.session) await loadDashboard(data.session);
         else authView();
       } catch (error) {
+        console.error('init error:', error);
         showError(error?.message || String(error));
       }
     }
