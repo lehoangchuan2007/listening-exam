@@ -56,7 +56,7 @@
     let exams=[];
     let editingExamId=null;
     let localAudioUrl="";
-    const esc=value=>String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;"," ">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+    const esc=value=>String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
     const parse=value=>{if(typeof value!=="string")return value??[];try{return JSON.parse(value)}catch{return[]}};
     const qs=exam=>Array.isArray(exam?.questions)?exam.questions:parse(exam?.questions);
     function studentLink(id){return location.origin+location.pathname.replace(/manage\.html$/,'')+"student.html#exam="+encodeURIComponent(id)}
