@@ -8,6 +8,14 @@ begin;
 -- Bảo đảm RLS đang bật.
 alter table public.exams enable row level security;
 
+-- QUAN TRỌNG:
+-- RLS policy không thay thế quyền SELECT cấp bảng.
+-- Dashboard/admin.html cần đọc hồ sơ giáo viên hiện tại để kiểm tra quyền.
+-- Chỉ cấp SELECT cho authenticated; RLS bên dưới vẫn giới hạn mỗi giáo viên
+-- chỉ đọc được chính hồ sơ của mình.
+grant select on table public.teacher_profiles to authenticated;
+revoke all on table public.teacher_profiles from anon;
+
 -- Xóa các policy SELECT cũ trên exams có thể cho phép đọc quá rộng.
 -- Giữ lại policy mới "teachers can read own exams".
 do $$
