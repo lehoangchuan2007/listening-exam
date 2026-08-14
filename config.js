@@ -71,7 +71,7 @@ window.SUPABASE_CONFIG = {
 (function(){
   if(!/student\.html$/.test(location.pathname))return;
   if(document.getElementById('student-reading-fix-script'))return;
-  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=3"></script>');
+  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=4"></script>');
 })();
 
 // Reading create/edit compatibility patch.
