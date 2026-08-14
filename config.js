@@ -144,3 +144,14 @@ window.SUPABASE_CONFIG = {
   s.defer=true;
   document.head.appendChild(s);
 })();
+
+// Reading Word import formatting fix: intercepts only Reading Word import.
+(function(){
+  if(!/manage\.html$/.test(location.pathname))return;
+  if(document.getElementById('reading-word-format-fix-script'))return;
+  const s=document.createElement('script');
+  s.id='reading-word-format-fix-script';
+  s.src='./reading-word-format-fix.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
