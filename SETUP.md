@@ -33,13 +33,33 @@ window.SUPABASE_CONFIG = {
 
 **Không đưa `service_role` key vào website.**
 
-## 4. GitHub Pages
+## 4. Bật tài khoản sinh viên
 
-Commit `config.js`. GitHub Pages sẽ tự build lại. Sau đó mở:
+Sau khi chạy schema ban đầu, mở file `student-auth-security.sql` trong repository và chạy **một lần** trong Supabase SQL Editor.
+
+Migration này:
+- bắt buộc đăng nhập Supabase Auth trước khi gọi các RPC lấy đề;
+- gắn bài nộp mới với `auth.uid()` của tài khoản sinh viên;
+- lấy Họ tên + MSSV từ metadata tài khoản thay vì tin dữ liệu sinh viên tự nhập;
+- giới hạn số lần làm bài theo đúng tài khoản;
+- cho phép sinh viên chỉ xem lịch sử bài làm của chính tài khoản đó;
+- giữ đáp án đúng không bị lộ trước khi nộp bài.
+
+Trang sinh viên đã có sẵn giao diện **Đăng nhập / Đăng ký**. Khi đăng ký, tài khoản lưu:
+- Họ và tên
+- MSSV
+- Email
+- Mật khẩu
+
+Nếu Supabase bật xác nhận email, sinh viên cần xác nhận email trước khi đăng nhập.
+
+## 5. GitHub Pages
+
+Commit các file trên GitHub. GitHub Pages sẽ tự build lại. Sau đó mở:
 
 `https://lehoangchuan2007.github.io/listening-exam/`
 
-## 5. Luồng sử dụng
+## 6. Luồng sử dụng
 
 ### Giáo viên
 1. Tạo tài khoản/đăng nhập.
@@ -50,11 +70,14 @@ Commit `config.js`. GitHub Pages sẽ tự build lại. Sau đó mở:
 6. Vào **Kết quả** để xem điểm và xuất CSV mở bằng Excel.
 
 ### Sinh viên
-1. Mở link đề.
-2. Nhập họ tên/MSSV.
-3. Nghe MP3 online.
-4. Làm bài trong thời gian quy định.
-5. Nộp bài; server tự chấm và lưu kết quả.
+1. Mở trang sinh viên.
+2. Đăng ký tài khoản nếu chưa có.
+3. Đăng nhập.
+4. Chỉ sau khi đăng nhập mới xem được thư viện đề và truy cập bài kiểm tra.
+5. Họ tên/MSSV được lấy từ tài khoản, không cần nhập lại khi nộp bài.
+6. Làm bài trong thời gian quy định.
+7. Nộp bài; server tự chấm và lưu kết quả gắn với tài khoản.
+8. Mở **Lịch sử làm bài** để xem các lượt đã làm và xem lại chi tiết.
 
 ## Mẫu Word
 
