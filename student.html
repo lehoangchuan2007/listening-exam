@@ -16,369 +16,86 @@
     .exam{border:1px solid #e2e8f0;border-radius:16px;padding:18px;transition:.15s}
     .exam:hover{border-color:#60a5fa;transform:translateY(-2px);box-shadow:0 8px 20px #2563eb12}
     .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#dcfce7;color:#166534;font-size:12px;font-weight:800}
-    .badge.reading{background:#ede9fe;color:#6d28d9}
-    .badge.listening{background:#dbeafe;color:#1d4ed8}
-    .badge.writing{background:#fef3c7;color:#92400e}
-    .muted{color:#64748b;font-size:14px}
-    .btn{border:0;border-radius:10px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
-    .btn.gray{background:#e8eef7;color:#0f172a}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-    .search{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:11px;font-size:15px}
-    .field{margin:12px 0}
-    .field label{display:block;font-weight:700;margin-bottom:6px}
-    .field input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px}
-    .notice{padding:14px;border-radius:11px;background:#eff6ff;color:#1e40af;margin:12px 0}
-    .danger{background:#fef2f2;color:#991b1b}
-    .q{border-bottom:1px solid #e2e8f0;padding:20px 0}
-    .q:last-child{border-bottom:0}
-    .choice{display:block;border:1px solid #cbd5e1;padding:12px;border-radius:9px;margin:8px 0;cursor:pointer;background:#fff}
-    .choice:hover{border-color:#60a5fa;background:#f8fbff}
-    .choice input{margin-right:8px}
-    .timer{position:sticky;top:10px;z-index:20;background:#fff;border:2px solid #2563eb;border-radius:12px;padding:12px;text-align:center;font-weight:900;font-size:20px;margin-bottom:15px}
-    .result{text-align:center;font-size:42px;font-weight:900;color:#2563eb}
-    .review{border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin:12px 0}
-    .review.ok{border-left:5px solid #16a34a;background:#f0fdf4}
-    .review.bad{border-left:5px solid #dc2626;background:#fef2f2}
-    .review .answer{margin-top:8px;padding:8px 10px;border-radius:8px;background:#fff}
-    .review .correct{color:#15803d;font-weight:800}
-    .review .wrong{color:#b91c1c;font-weight:800}
-    .history-item{border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin:10px 0}
-    .score{font-size:25px;font-weight:900;color:#2563eb}
-    audio{width:100%;margin:12px 0}
-
-    /* READING: hai khu vực cuộn độc lập, chiếm toàn bộ vùng làm bài */
+    .badge.reading{background:#ede9fe;color:#6d28d9}.badge.listening{background:#dbeafe;color:#1d4ed8}.badge.writing{background:#fef3c7;color:#92400e}
+    .muted{color:#64748b;font-size:14px}.btn{border:0;border-radius:10px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}.btn.gray{background:#e8eef7;color:#0f172a}.btn:disabled{opacity:.55;cursor:not-allowed}
+    .search{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:11px;font-size:15px}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:10px}
+    .notice{padding:14px;border-radius:11px;background:#eff6ff;color:#1e40af;margin:12px 0}.danger{background:#fef2f2;color:#991b1b}.q{border-bottom:1px solid #e2e8f0;padding:20px 0}.q:last-child{border-bottom:0}.choice{display:block;border:1px solid #cbd5e1;padding:12px;border-radius:9px;margin:8px 0;cursor:pointer;background:#fff}.choice:hover{border-color:#60a5fa;background:#f8fbff}.choice input{margin-right:8px}
+    .timer{position:sticky;top:10px;z-index:20;background:#fff;border:2px solid #2563eb;border-radius:12px;padding:12px;text-align:center;font-weight:900;font-size:20px;margin-bottom:15px}.result{text-align:center;font-size:42px;font-weight:900;color:#2563eb}.review{border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin:12px 0}.review.ok{border-left:5px solid #16a34a;background:#f0fdf4}.review.bad{border-left:5px solid #dc2626;background:#fef2f2}.review .answer{margin-top:8px;padding:8px 10px;border-radius:8px;background:#fff}.review .correct{color:#15803d;font-weight:800}.review .wrong{color:#b91c1c;font-weight:800}.history-item{border:1px solid #e2e8f0;border-radius:14px;padding:16px;margin:10px 0}.score{font-size:25px;font-weight:900;color:#2563eb}audio{width:100%;margin:12px 0}
     .reading-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch;height:calc(100vh - 185px);min-height:560px}
     .reading-pane,.reading-questions{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;background:#fff;border:1px solid #dbe3ef;border-radius:16px;padding:20px;box-shadow:0 6px 24px #0f172a0b;overscroll-behavior:contain;scrollbar-gutter:stable}
     .reading-title{position:sticky;top:-20px;z-index:5;background:#fff;margin:-20px -20px 14px;padding:20px 20px 12px;border-bottom:1px solid #e2e8f0}
-    .reading-text{white-space:pre-wrap;line-height:1.9;font-size:16px;overflow-wrap:anywhere}
-    .reading-hint{font-size:13px;color:#64748b;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;margin-bottom:14px}
-    .reading-submit{margin-top:16px;padding-top:8px;padding-bottom:8px;position:sticky;bottom:0;background:linear-gradient(transparent,#fff 35%);z-index:4}
-    .reading-pane::-webkit-scrollbar,.reading-questions::-webkit-scrollbar{width:9px}
-    .reading-pane::-webkit-scrollbar-thumb,.reading-questions::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
-
-    @media(max-width:850px){
-      .reading-layout{grid-template-columns:1fr;height:auto;min-height:0}
-      .reading-pane,.reading-questions{height:55vh;min-height:380px}
-      .reading-questions{margin-top:0}
-    }
-    @media(max-width:700px){
-      .grid{grid-template-columns:1fr}
-      .wrap{padding:16px 12px}
-    }
+    .reading-text{white-space:normal;line-height:1.9;font-size:16px;overflow-wrap:anywhere}
+    .reading-text p{margin:0 0 14px}.reading-text div{margin:0 0 10px}.reading-text strong,.reading-text b{font-weight:700}.reading-text em,.reading-text i{font-style:italic}.reading-text u{text-decoration:underline}.reading-text s,.reading-text strike{text-decoration:line-through}.reading-text ul,.reading-text ol{padding-left:30px;margin:8px 0 14px}.reading-text h1,.reading-text h2,.reading-text h3,.reading-text h4,.reading-text h5,.reading-text h6{margin:0 0 14px;line-height:1.35}.reading-text span[style],.reading-text p[style],.reading-text div[style]{white-space:normal}
+    .reading-hint{font-size:13px;color:#64748b;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;margin-bottom:14px}.reading-submit{margin-top:16px;padding-top:8px;padding-bottom:8px;position:sticky;bottom:0;background:linear-gradient(transparent,#fff 35%);z-index:4}.reading-pane::-webkit-scrollbar,.reading-questions::-webkit-scrollbar{width:9px}.reading-pane::-webkit-scrollbar-thumb,.reading-questions::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+    @media(max-width:850px){.reading-layout{grid-template-columns:1fr;height:auto;min-height:0}.reading-pane,.reading-questions{height:55vh;min-height:380px}.reading-questions{margin-top:0}}
+    @media(max-width:700px){.grid{grid-template-columns:1fr}.wrap{padding:16px 12px}}
   </style>
 </head>
 <body>
-  <header class="top">
-    <div class="wrap">
-      <h1 id="pageTitle">🎧 English Studio</h1>
-      <div>🧑‍🎓 Khu vực ôn tập & làm bài</div>
-    </div>
-  </header>
-
+  <header class="top"><div class="wrap"><h1 id="pageTitle">🎧 English Studio</h1><div>🧑‍🎓 Khu vực ôn tập & làm bài</div></div></header>
   <main class="wrap"><div id="app"></div></main>
-
   <script>
     const cfg=window.SUPABASE_CONFIG||{};
     const sb=supabase.createClient(cfg.url,cfg.anonKey);
-    const app=document.getElementById('app');
-    let exams=[];
-    let exam=null;
-    let timer=null;
-    const UNLIMITED=2147483647;
-
+    const app=document.getElementById('app'); let exams=[]; let exam=null; let timer=null; const UNLIMITED=2147483647;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-    function parseJson(value,fallback=[]){
-      if(typeof value!=='string') return value??fallback;
-      try{return JSON.parse(value)}catch{return fallback}
-    }
-
-    function normalizeKey(key){
-      key=parseJson(key,[]);
-      if(Array.isArray(key)) return key;
-      if(key&&typeof key==='object') return Object.values(key);
-      return [];
-    }
-
-    function normalizeAnswers(answers){
-      answers=parseJson(answers,{});
-      return answers&&typeof answers==='object'?answers:{};
-    }
-
-    function typeName(type){
-      return ({listening:'🎧 Listening',reading:'📖 Reading',writing:'✍️ Writing',mixed:'🧩 Kết hợp'})[type]||'🎧 Listening';
-    }
-
-    function typeClass(type){
-      if(type==='reading') return 'reading';
-      if(type==='writing') return 'writing';
-      return 'listening';
-    }
-
-    function typeIcon(type){
-      return type==='reading'?'📖':type==='writing'?'✍️':'🎧';
-    }
-
-    function getQuestions(e){
-      const q=parseJson(e?.questions,[]);
-      return Array.isArray(q)?q:[];
-    }
-
-    function readingText(e){
-      return e?.reading_text||e?.reading_passage||e?.passage||e?.reading_content||e?.content||'';
-    }
-
-    function friendly(message){
-      const s=String(message||'').toLowerCase();
-      if(s.includes('maximum attempts')) return '🚫 Bạn đã hết số lần làm bài.';
-      if(s.includes('not available')||s.includes('closed')) return '🔒 Đề thi hiện đã đóng hoặc không còn khả dụng.';
-      if(s.includes('not yet')) return '⏰ Chưa đến thời gian thi.';
-      if(s.includes('ended')) return '⏰ Thời gian thi đã kết thúc.';
-      return '❌ '+message;
-    }
-
-    function error(message){
-      app.innerHTML=`<div class="card notice danger"><h2>⚠️ Không thể tải đề</h2><p>${esc(message)}</p><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div>`;
-    }
-
-    async function init(){
-      if(!cfg.url||!cfg.anonKey) return error('Thiếu cấu hình Supabase trong config.js.');
-      const direct=location.hash.startsWith('#exam=');
-      if(direct) return loadExam(location.hash.slice(6));
-      await loadList();
-    }
-
-    async function loadList(){
-      app.innerHTML=`
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-            <div><h2>📚 Thư viện đề thi</h2><p class="muted">Các đề đã được giáo viên mở. Chọn đề để luyện tập hoặc làm bài.</p></div>
-            <button class="btn gray" onclick="showHistory()">📊 Lịch sử làm bài</button>
-          </div>
-          <input id="search" class="search" placeholder="🔎 Tìm kiếm tên đề...">
-        </div>
-        <div id="list" class="grid"><div class="card">⏳ Đang tải danh sách đề...</div></div>`;
-
-      const result=await sb.rpc('get_published_exams_for_student');
-      if(result.error) return error(result.error.message);
-      exams=result.data||[];
-      renderList();
-      document.getElementById('search').oninput=e=>renderList(e.target.value);
-    }
-
-    function renderList(query=''){
-      query=query.toLowerCase().trim();
-      const rows=exams.filter(e=>!query||String(e.title||'').toLowerCase().includes(query)||String(e.description||'').toLowerCase().includes(query));
-      document.getElementById('list').innerHTML=rows.length?rows.map(e=>`
-        <div class="exam">
-          <span class="badge ${typeClass(e.exam_type)}">${typeName(e.exam_type)}</span>
-          <h2>${esc(e.title)}</h2>
-          <p class="muted">${esc(e.description||'Chưa có mô tả')}</p>
-          <p>📝 ${esc(e.question_count)} câu &nbsp;•&nbsp; ⏱️ ${esc(e.duration_minutes)} phút &nbsp;•&nbsp; 🔢 ${Number(e.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':esc(e.max_attempts||1)+' lần'}</p>
-          <button class="btn" onclick="loadExam('${esc(e.id)}')">🚀 Làm bài</button>
-        </div>`).join(''):'<div class="card">🔎 Không tìm thấy đề phù hợp.</div>';
-    }
-
-    async function loadExam(id){
-      app.innerHTML='<div class="card">⏳ Đang tải đề thi...</div>';
-
-      const result=await sb.rpc('get_exam_for_student',{p_exam_id:id});
-      if(result.error) return error(friendly(result.error.message));
-
-      let data=result.data;
-      if(Array.isArray(data)) data=data[0];
-      if(data?.data&&Array.isArray(data.data)) data=data.data[0];
-      if(typeof data==='string'){try{data=JSON.parse(data)}catch{}}
-      if(!data||!data.id) return error('Không nhận được dữ liệu đề thi từ máy chủ.');
-
-      const currentType=String(data.exam_type||'').toLowerCase();
-      if(currentType!=='reading'||!readingText(data)){
-        try{
-          const rr=await sb.rpc('get_reading_exam_for_student',{p_exam_id:id});
-          if(!rr.error&&rr.data){
-            let rd=rr.data;
-            if(Array.isArray(rd)) rd=rd[0];
-            if(rd?.data&&Array.isArray(rd.data)) rd=rd.data[0];
-            if(typeof rd==='string'){try{rd=JSON.parse(rd)}catch{}}
-            if(rd?.id&&String(rd.exam_type||'').toLowerCase()==='reading') data={...data,...rd,exam_type:'reading'};
-          }
-        }catch(e){}
+    // Reading is stored as rich HTML by the teacher. Render it safely on the student page.
+    function readingRichHtml(value){
+      let raw=String(value??'');
+      // Also handle data that was HTML-escaped before being stored.
+      if(/&lt;\/?[a-z][\s\S]*&gt;/i.test(raw)){
+        const box=document.createElement('textarea'); box.innerHTML=raw; raw=box.value;
       }
-
-      exam=data;
-      showInfo();
-    }
-
-    function showInfo(){
-      const maxText=Number(exam.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':`${exam.max_attempts||1} lần`;
-      const now=Date.now();
-      const startAt=exam.start_at?new Date(exam.start_at).getTime():null;
-      const endAt=exam.end_at?new Date(exam.end_at).getTime():null;
-      let notice='';
-      if(startAt&&now<startAt) notice=`<div class="notice">⏰ Đề chưa mở. Bắt đầu từ: <b>${new Date(startAt).toLocaleString('vi-VN')}</b></div>`;
-      else if(endAt&&now>endAt) notice=`<div class="notice danger">🔒 Đề đã hết hạn vào: <b>${new Date(endAt).toLocaleString('vi-VN')}</b></div>`;
-      else if(endAt) notice=`<div class="notice">🟢 Đang mở đến: <b>${new Date(endAt).toLocaleString('vi-VN')}</b></div>`;
-
-      const icon=typeIcon(exam.exam_type);
-      document.getElementById('pageTitle').textContent=`${icon} English Studio`;
-      app.innerHTML=`
-        <div class="card">
-          <button class="btn gray" onclick="goLibrary()">← Danh sách đề</button>
-          <h2>${icon} ${esc(exam.title)}</h2>
-          <p class="muted">${esc(exam.description||'')}</p>
-          ${notice}
-          <div class="notice">⏱️ Thời gian: <b>${esc(exam.duration_minutes||30)} phút</b><br>🔢 Số lần làm tối đa: <b>${maxText}</b></div>
-          <div class="field"><label>Họ và tên</label><input id="name" placeholder="Nguyễn Văn A"></div>
-          <div class="field"><label>MSSV</label><input id="sid" placeholder="B1234567"></div>
-          <button class="btn" onclick="start()" ${(startAt&&now<startAt)||(endAt&&now>endAt)?'disabled':''}>🚀 Bắt đầu làm bài</button>
-        </div>`;
-    }
-
-    function goLibrary(){
-      if(timer){clearInterval(timer);timer=null;}
-      location.href='./student.html';
-    }
-
-    async function start(){
-      const name=document.getElementById('name').value.trim();
-      const studentId=document.getElementById('sid').value.trim();
-      if(!name||!studentId) return alert('Vui lòng nhập Họ tên và MSSV.');
-      const now=Date.now();
-      const startAt=exam.start_at?new Date(exam.start_at).getTime():null;
-      const endAt=exam.end_at?new Date(exam.end_at).getTime():null;
-      if(startAt&&now<startAt) return alert('⏰ Chưa đến thời gian mở đề.');
-      if(endAt&&now>endAt) return alert('⏰ Thời gian thi đã kết thúc.');
-
-      const result=await sb.rpc('check_exam_attempts',{p_exam_id:exam.id,p_student_id:studentId});
-      if(result.error) return alert(friendly(result.error.message));
-      if(Number(exam.max_attempts)<UNLIMITED&&Number(result.data)>=Number(exam.max_attempts||1)) return alert('🚫 Bạn đã hết số lần làm bài.');
-      renderExam(name,studentId);
-    }
-
-    function renderQuestionBlock(question,index){
-      let html=`<div class="q"><b>Câu ${index+1}. ${esc(question.question||question.text||'')}</b>`;
-      (question.options||[]).forEach((option,j)=>{html+=`<label class="choice"><input type="radio" name="q${index}" value="${j}">${String.fromCharCode(65+j)}. ${esc(option)}</label>`});
-      return html+'</div>';
-    }
-
-    function submitButton(name,studentId){
-      const safeName=String(name).replace(/'/g,"\\'");
-      const safeId=String(studentId).replace(/'/g,"\\'");
-      return `<button class="btn" onclick="submitExam('${safeName}','${safeId}')">📤 Nộp bài</button>`;
-    }
-
-    function renderExam(name,studentId){
-      const questions=getQuestions(exam);
-      const isReading=String(exam.exam_type||'').toLowerCase()==='reading';
-      const icon=typeIcon(exam.exam_type);
-      let html='<div class="timer" id="timer">⏱️ Đang chuẩn bị...</div>';
-
-      if(isReading){
-        html+=`<div class="reading-layout">
-          <section class="reading-pane">
-            <h2 class="reading-title">📖 Nội dung bài Reading</h2>
-            <div class="reading-hint">💡 Bài đọc bên trái và câu hỏi bên phải <b>cuộn độc lập</b>. Kéo thanh cuộn của từng bên mà không ảnh hưởng bên còn lại.</div>
-            <div class="reading-text">${esc(readingText(exam)||'Chưa có nội dung bài Reading.')}</div>
-          </section>
-          <section class="reading-questions">
-            <h2 class="reading-title">❓ Câu hỏi & đáp án</h2>
-            <div class="reading-hint">Chọn đáp án cho từng câu. Khi cuộn phần câu hỏi, bài đọc bên trái vẫn giữ nguyên vị trí.</div>
-            ${questions.map(renderQuestionBlock).join('')}
-            <div class="reading-submit">${submitButton(name,studentId)}</div>
-          </section>
-        </div>`;
-      }else{
-        html+=`<div class="card"><h2>${icon} ${esc(exam.title)}</h2>${exam.audio_url?`<audio controls src="${esc(exam.audio_url)}"></audio>`:''}<div id="questions">${questions.map(renderQuestionBlock).join('')}</div>${submitButton(name,studentId)}</div>`;
+      if(!/<[a-z][\s\S]*>/i.test(raw)){
+        return raw.replace(/\r\n?/g,'\n').split(/\n\n+/).map(p=>`<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
       }
-
-      app.innerHTML=html;
-      const endTime=Date.now()+Number(exam.duration_minutes||30)*60000;
-      timer=setInterval(()=>{
-        const left=Math.max(0,endTime-Date.now());
-        const minutes=Math.floor(left/60000);
-        const seconds=Math.floor(left/1000)%60;
-        const el=document.getElementById('timer');
-        if(el) el.textContent=`⏱️ Còn ${minutes}:${String(seconds).padStart(2,'0')}`;
-        if(!left){clearInterval(timer);timer=null;submitExam(name,studentId)}
-      },500);
-    }
-
-    async function submitExam(name,studentId){
-      if(timer){clearInterval(timer);timer=null;}
-      const answers={};
-      getQuestions(exam).forEach((q,i)=>{
-        const selected=document.querySelector(`input[name="q${i}"]:checked`);
-        if(selected) answers[i]=Number(selected.value);
+      const doc=new DOMParser().parseFromString(raw,'text/html');
+      const allowed=new Set(['P','DIV','BR','SPAN','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','H1','H2','H3','H4','H5','H6','FONT','MARK','SUB','SUP']);
+      const safeCss=new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','color','line-height','background-color']);
+      const clean=(root)=>Array.from(root.children).forEach(el=>{
+        if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return;}
+        Array.from(el.attributes).forEach(a=>{
+          const n=a.name.toLowerCase();
+          if(n==='style'){
+            const keep=[];
+            String(a.value).split(';').forEach(rule=>{const [p0,...rest]=rule.split(':');const p=String(p0||'').trim().toLowerCase(),v=rest.join(':').trim();if(!safeCss.has(p)||!v||/[<>]/.test(v)||/javascript\s*:/i.test(v))return;if(p==='text-align'&&!/^(left|center|right|justify)$/i.test(v))return;if(p==='font-size'&&!/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(v))return;if(p==='font-weight'&&!/^(normal|bold|[1-9]00)$/i.test(v))return;keep.push(p+':'+v)});
+            if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style');
+          }else if(n==='face'&&el.tagName==='FONT'){if(!/^[a-z0-9 ,"'_-]+$/i.test(a.value))el.removeAttribute(a.name)}
+          else if(n==='size'&&el.tagName==='FONT'){if(!/^[1-7]$/.test(a.value))el.removeAttribute(a.name)}
+          else if(n==='color'&&el.tagName==='FONT'){if(!/^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(a.value))el.removeAttribute(a.name)}
+          else el.removeAttribute(a.name);
+        }); clean(el);
       });
-
-      const result=await sb.rpc('submit_exam',{p_exam_id:exam.id,p_student_name:name,p_student_id:studentId,p_answers:answers});
-      if(result.error) return alert(friendly(result.error.message));
-      let data=result.data||{};
-      if(Array.isArray(data)) data=data[0]||{};
-      if(typeof data==='string'){try{data=JSON.parse(data)}catch{}}
-      showResult(data,answers);
+      clean(doc.body); return doc.body.innerHTML||'<p><br></p>';
     }
 
-    function showResult(data,answers){
-      const questions=getQuestions(exam);
-      const key=data.answer_key||exam.answer_key||exam.answers_key||[];
-      if(Array.isArray(key)) exam.answer_key=key;
-      app.innerHTML=`<div class="card"><div class="result">${esc(data.score??'—')}</div><h2 style="text-align:center">🎉 Đã nộp bài thành công!</h2><p style="text-align:center">Đúng: ${esc(data.correct_count??'—')}/${esc(data.total_questions??questions.length)}</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" id="reviewBtn">📋 Xem đáp án & bài làm</button><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div></div><div id="reviewBox" class="card" style="display:none"><h2>📋 Xem đáp án & bài làm</h2><p class="muted">Kiểm tra câu bạn chọn và đáp án đúng.</p><div id="reviewList"></div></div>`;
-      document.getElementById('reviewBtn').onclick=()=>{
-        const box=document.getElementById('reviewBox');
-        box.style.display=box.style.display==='none'?'block':'none';
-        if(!box.dataset.rendered){renderReview(answers,questions,key);box.dataset.rendered='1';}
-      };
-    }
-
-    function renderReview(answers,questions,key){
-      const box=document.getElementById('reviewList');
-      if(!Array.isArray(key)||key.length!==questions.length){box.innerHTML='<div class="notice danger">Máy chủ chưa trả <code>answer_key</code> sau khi nộp bài.</div>';return;}
-      box.innerHTML=questions.map((q,i)=>{
-        const given=answers[String(i)]??answers[i];
-        const correct=Number(key[i]);
-        const ok=given!==undefined&&Number(given)===correct;
-        const options=q.options||[];
-        return `<div class="review ${ok?'ok':'bad'}"><b>Câu ${i+1}. ${esc(q.question||q.text||'')}</b><div class="answer ${ok?'correct':'wrong'}">${ok?'✅ Đúng':'❌ Sai'}</div><div class="answer">Bạn chọn: <b>${esc(given===undefined?'Chưa trả lời':String.fromCharCode(65+Number(given))+'. '+(options[Number(given)]||''))}</b></div><div class="answer">Đáp án đúng: <b>${esc(key[i]===undefined?'Chưa có đáp án':String.fromCharCode(65+correct)+'. '+(options[correct]||''))}</b></div></div>`;
-      }).join('');
-    }
-
-    async function showHistory(){
-      const studentId=prompt('Nhập MSSV đã dùng khi làm bài:');
-      if(!studentId||!studentId.trim()) return;
-      app.innerHTML='<div class="card">⏳ Đang tải lịch sử làm bài...</div>';
-      const result=await sb.from('submissions').select('*').eq('student_id',studentId.trim()).order('submitted_at',{ascending:false});
-      if(result.error) return error(result.error.message);
-      const rows=result.data||[];
-      if(!rows.length){app.innerHTML='<div class="card"><h2>📊 Lịch sử làm bài</h2><div class="notice">📭 Chưa tìm thấy bài làm nào với MSSV này.</div><button class="btn gray" onclick="goLibrary()">📚 Về thư viện</button></div>';return;}
-      const ids=[...new Set(rows.map(r=>r.exam_id).filter(Boolean))];
-      const map={};
-      if(ids.length){const er=await sb.from('exams').select('*').in('id',ids);if(er.error)return error(er.error.message);(er.data||[]).forEach(e=>map[e.id]=e);}
-      window.historyRows=rows;window.historyExams=map;
-      let html=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h2>📊 Lịch sử làm bài</h2><p class="muted">${rows.length} lượt làm</p></div><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div>`;
-      rows.forEach((row,index)=>{const e=map[row.exam_id]||{};const calc=calculateCurrentResult(row,e);html+=`<div class="history-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h3>${esc(e.title||'Đề thi')}</h3><div class="muted">🕐 ${row.submitted_at?new Date(row.submitted_at).toLocaleString('vi-VN'):'Không rõ thời gian'}</div></div><div class="score">${esc(calc.score)}</div></div><p>✅ ${esc(calc.correct)}/${esc(calc.total)} câu đúng</p><button class="btn gray" onclick="viewHistorySubmission(${index})">📋 Xem bài làm</button></div>`});
-      html+='</div><div id="historyDetail"></div>';app.innerHTML=html;
-    }
-
-    function calculateCurrentResult(submission,e){
-      const answers=normalizeAnswers(submission.answers);
-      const key=normalizeKey(e.answer_key);
-      const questions=getQuestions(e);
-      const total=questions.length||Number(submission.total_questions)||key.length||0;
-      let correct=0;
-      for(let i=0;i<total;i++){const given=answers[String(i)]??answers[i];if(given!==undefined&&key[i]!==undefined&&Number(given)===Number(key[i]))correct++;}
-      return {answers,key,questions,total,correct,score:total?Math.round(correct*10/total*10)/10:0};
-    }
-
-    function viewHistorySubmission(index){
-      const row=window.historyRows[index];
-      const e=window.historyExams[row.exam_id]||{};
-      const calc=calculateCurrentResult(row,e);
-      let html=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2>📋 ${esc(e.title||'Bài làm')}</h2><button class="btn gray" onclick="document.getElementById('historyDetail').innerHTML=''">Đóng</button></div><p class="muted">Điểm: ${esc(calc.score)} • Đúng: ${esc(calc.correct)}/${esc(calc.total)}</p>`;
-      calc.questions.forEach((q,i)=>{const given=calc.answers[String(i)]??calc.answers[i];const correct=Number(calc.key[i]);const ok=given!==undefined&&calc.key[i]!==undefined&&Number(given)===correct;const options=q.options||[];html+=`<div class="review ${ok?'ok':'bad'}"><b>Câu ${i+1}. ${esc(q.question||q.text||'')}</b><div class="answer ${ok?'correct':'wrong'}">${ok?'✅ Đúng':'❌ Sai'}</div><div class="answer">Bạn chọn: <b>${esc(given===undefined?'Chưa trả lời':String.fromCharCode(65+Number(given))+'. '+(options[Number(given)]||''))}</b></div><div class="answer">Đáp án đúng: <b>${esc(calc.key[i]===undefined?'Chưa có đáp án':String.fromCharCode(65+correct)+'. '+(options[correct]||''))}</b></div></div>`});
-      html+='</div>';document.getElementById('historyDetail').innerHTML=html;document.getElementById('historyDetail').scrollIntoView({behavior:'smooth'});
-    }
-
+    function parseJson(value,fallback=[]){if(typeof value!=='string')return value??fallback;try{return JSON.parse(value)}catch{return fallback}}
+    function normalizeKey(key){key=parseJson(key,[]);if(Array.isArray(key))return key;if(key&&typeof key==='object')return Object.values(key);return []}
+    function normalizeAnswers(answers){answers=parseJson(answers,{});return answers&&typeof answers==='object'?answers:{}}
+    function typeName(type){return ({listening:'🎧 Listening',reading:'📖 Reading',writing:'✍️ Writing',mixed:'🧩 Kết hợp'})[type]||'🎧 Listening'}
+    function typeClass(type){if(type==='reading')return'reading';if(type==='writing')return'writing';return'listening'}
+    function typeIcon(type){return type==='reading'?'📖':type==='writing'?'✍️':'🎧'}
+    function getQuestions(e){const q=parseJson(e?.questions,[]);return Array.isArray(q)?q:[]}
+    function readingText(e){return e?.reading_text||e?.reading_passage||e?.passage||e?.reading_content||e?.content||''}
+    function friendly(message){const s=String(message||'').toLowerCase();if(s.includes('maximum attempts'))return'🚫 Bạn đã hết số lần làm bài.';if(s.includes('not available')||s.includes('closed'))return'🔒 Đề thi hiện đã đóng hoặc không còn khả dụng.';if(s.includes('not yet'))return'⏰ Chưa đến thời gian thi.';if(s.includes('ended'))return'⏰ Thời gian thi đã kết thúc.';return'❌ '+message}
+    function error(message){app.innerHTML=`<div class="card notice danger"><h2>⚠️ Không thể tải đề</h2><p>${esc(message)}</p><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div>`}
+    async function init(){if(!cfg.url||!cfg.anonKey)return error('Thiếu cấu hình Supabase trong config.js.');const direct=location.hash.startsWith('#exam=');if(direct)return loadExam(location.hash.slice(6));await loadList()}
+    async function loadList(){app.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2>📚 Thư viện đề thi</h2><p class="muted">Các đề đã được giáo viên mở. Chọn đề để luyện tập hoặc làm bài.</p></div><button class="btn gray" onclick="showHistory()">📊 Lịch sử làm bài</button></div><input id="search" class="search" placeholder="🔎 Tìm kiếm tên đề..."></div><div id="list" class="grid"><div class="card">⏳ Đang tải danh sách đề...</div></div>`;const result=await sb.rpc('get_published_exams_for_student');if(result.error)return error(result.error.message);exams=result.data||[];renderList();document.getElementById('search').oninput=e=>renderList(e.target.value)}
+    function renderList(query=''){query=query.toLowerCase().trim();const rows=exams.filter(e=>!query||String(e.title||'').toLowerCase().includes(query)||String(e.description||'').toLowerCase().includes(query));document.getElementById('list').innerHTML=rows.length?rows.map(e=>`<div class="exam"><span class="badge ${typeClass(e.exam_type)}">${typeName(e.exam_type)}</span><h2>${esc(e.title)}</h2><p class="muted">${esc(e.description||'Chưa có mô tả')}</p><p>📝 ${esc(e.question_count)} câu &nbsp;•&nbsp; ⏱️ ${esc(e.duration_minutes)} phút &nbsp;•&nbsp; 🔢 ${Number(e.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':esc(e.max_attempts||1)+' lần'}</p><button class="btn" onclick="loadExam('${esc(e.id)}')">🚀 Làm bài</button></div>`).join(''):'<div class="card">🔎 Không tìm thấy đề phù hợp.</div>'}
+    async function loadExam(id){app.innerHTML='<div class="card">⏳ Đang tải đề thi...</div>';const result=await sb.rpc('get_exam_for_student',{p_exam_id:id});if(result.error)return error(friendly(result.error.message));let data=result.data;if(Array.isArray(data))data=data[0];if(data?.data&&Array.isArray(data.data))data=data.data[0];if(typeof data==='string'){try{data=JSON.parse(data)}catch{}}if(!data||!data.id)return error('Không nhận được dữ liệu đề thi từ máy chủ.');const currentType=String(data.exam_type||'').toLowerCase();if(currentType!=='reading'||!readingText(data)){try{const rr=await sb.rpc('get_reading_exam_for_student',{p_exam_id:id});if(!rr.error&&rr.data){let rd=rr.data;if(Array.isArray(rd))rd=rd[0];if(rd?.data&&Array.isArray(rd.data))rd=rd.data[0];if(typeof rd==='string'){try{rd=JSON.parse(rd)}catch{}}if(rd?.id&&String(rd.exam_type||'').toLowerCase()==='reading')data={...data,...rd,exam_type:'reading'}}}catch(e){}}exam=data;showInfo()}
+    function showInfo(){const maxText=Number(exam.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':`${exam.max_attempts||1} lần`;const now=Date.now();const startAt=exam.start_at?new Date(exam.start_at).getTime():null;const endAt=exam.end_at?new Date(exam.end_at).getTime():null;let notice='';if(startAt&&now<startAt)notice=`<div class="notice">⏰ Đề chưa mở. Bắt đầu từ: <b>${new Date(startAt).toLocaleString('vi-VN')}</b></div>`;else if(endAt&&now>endAt)notice=`<div class="notice danger">🔒 Đề đã hết hạn vào: <b>${new Date(endAt).toLocaleString('vi-VN')}</b></div>`;else if(endAt)notice=`<div class="notice">🟢 Đang mở đến: <b>${new Date(endAt).toLocaleString('vi-VN')}</b></div>`;const icon=typeIcon(exam.exam_type);document.getElementById('pageTitle').textContent=`${icon} English Studio`;app.innerHTML=`<div class="card"><button class="btn gray" onclick="goLibrary()">← Danh sách đề</button><h2>${icon} ${esc(exam.title)}</h2><p class="muted">${esc(exam.description||'')}</p>${notice}<div class="notice">⏱️ Thời gian: <b>${esc(exam.duration_minutes||30)} phút</b><br>🔢 Số lần làm tối đa: <b>${maxText}</b></div><div class="field"><label>Họ và tên</label><input id="name" placeholder="Nguyễn Văn A"></div><div class="field"><label>MSSV</label><input id="sid" placeholder="B1234567"></div><button class="btn" onclick="start()" ${(startAt&&now<startAt)||(endAt&&now>endAt)?'disabled':''}>🚀 Bắt đầu làm bài</button></div>`}
+    function goLibrary(){if(timer){clearInterval(timer);timer=null}location.href='./student.html'}
+    async function start(){const name=document.getElementById('name').value.trim();const studentId=document.getElementById('sid').value.trim();if(!name||!studentId)return alert('Vui lòng nhập Họ tên và MSSV.');const now=Date.now();const startAt=exam.start_at?new Date(exam.start_at).getTime():null;const endAt=exam.end_at?new Date(exam.end_at).getTime():null;if(startAt&&now<startAt)return alert('⏰ Chưa đến thời gian mở đề.');if(endAt&&now>endAt)return alert('⏰ Thời gian thi đã kết thúc.');const result=await sb.rpc('check_exam_attempts',{p_exam_id:exam.id,p_student_id:studentId});if(result.error)return alert(friendly(result.error.message));if(Number(exam.max_attempts)<UNLIMITED&&Number(result.data)>=Number(exam.max_attempts||1))return alert('🚫 Bạn đã hết số lần làm bài.');renderExam(name,studentId)}
+    function renderQuestionBlock(question,index){let html=`<div class="q"><b>Câu ${index+1}. ${esc(question.question||question.text||'')}</b>`;(question.options||[]).forEach((option,j)=>{html+=`<label class="choice"><input type="radio" name="q${index}" value="${j}">${String.fromCharCode(65+j)}. ${esc(option)}</label>`});return html+'</div>'}
+    function submitButton(name,studentId){const safeName=String(name).replace(/'/g,"\\'");const safeId=String(studentId).replace(/'/g,"\\'");return `<button class="btn" onclick="submitExam('${safeName}','${safeId}')">📤 Nộp bài</button>`}
+    function renderExam(name,studentId){const questions=getQuestions(exam);const isReading=String(exam.exam_type||'').toLowerCase()==='reading';const icon=typeIcon(exam.exam_type);let html='<div class="timer" id="timer">⏱️ Đang chuẩn bị...</div>';if(isReading){html+=`<div class="reading-layout"><section class="reading-pane"><h2 class="reading-title">📖 Nội dung bài Reading</h2><div class="reading-hint">💡 Bài đọc bên trái và câu hỏi bên phải <b>cuộn độc lập</b>. Kéo thanh cuộn của từng bên mà không ảnh hưởng bên còn lại.</div><div class="reading-text">${readingRichHtml(readingText(exam)||'Chưa có nội dung bài Reading.')}</div></section><section class="reading-questions"><h2 class="reading-title">❓ Câu hỏi & đáp án</h2><div class="reading-hint">Chọn đáp án cho từng câu. Khi cuộn phần câu hỏi, bài đọc bên trái vẫn giữ nguyên vị trí.</div>${questions.map(renderQuestionBlock).join('')}<div class="reading-submit">${submitButton(name,studentId)}</div></section></div>`}else{html+=`<div class="card"><h2>${icon} ${esc(exam.title)}</h2>${exam.audio_url?`<audio controls src="${esc(exam.audio_url)}"></audio>`:''}<div id="questions">${questions.map(renderQuestionBlock).join('')}</div>${submitButton(name,studentId)}</div>`}app.innerHTML=html;const endTime=Date.now()+Number(exam.duration_minutes||30)*60000;timer=setInterval(()=>{const left=Math.max(0,endTime-Date.now()),minutes=Math.floor(left/60000),seconds=Math.floor(left/1000)%60,el=document.getElementById('timer');if(el)el.textContent=`⏱️ Còn ${minutes}:${String(seconds).padStart(2,'0')}`;if(!left){clearInterval(timer);timer=null;submitExam(name,studentId)}},500)}
+    async function submitExam(name,studentId){if(timer){clearInterval(timer);timer=null}const answers={};getQuestions(exam).forEach((q,i)=>{const selected=document.querySelector(`input[name="q${i}"]:checked`);if(selected)answers[i]=Number(selected.value)});const result=await sb.rpc('submit_exam',{p_exam_id:exam.id,p_student_name:name,p_student_id:studentId,p_answers:answers});if(result.error)return alert(friendly(result.error.message));let data=result.data||{};if(Array.isArray(data))data=data[0]||{};if(typeof data==='string'){try{data=JSON.parse(data)}catch{}}showResult(data,answers)}
+    function showResult(data,answers){const questions=getQuestions(exam);const key=data.answer_key||exam.answer_key||exam.answers_key||[];if(Array.isArray(key))exam.answer_key=key;app.innerHTML=`<div class="card"><div class="result">${esc(data.score??'—')}</div><h2 style="text-align:center">🎉 Đã nộp bài thành công!</h2><p style="text-align:center">Đúng: ${esc(data.correct_count??'—')}/${esc(data.total_questions??questions.length)}</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" id="reviewBtn">📋 Xem đáp án & bài làm</button><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div></div><div id="reviewBox" class="card" style="display:none"><h2>📋 Xem đáp án & bài làm</h2><p class="muted">Kiểm tra câu bạn chọn và đáp án đúng.</p><div id="reviewList"></div></div>`;document.getElementById('reviewBtn').onclick=()=>{const box=document.getElementById('reviewBox');box.style.display=box.style.display==='none'?'block':'none';if(!box.dataset.rendered){renderReview(answers,questions,key);box.dataset.rendered='1'}}}
+    function renderReview(answers,questions,key){const box=document.getElementById('reviewList');if(!Array.isArray(key)||key.length!==questions.length){box.innerHTML='<div class="notice danger">Máy chủ chưa trả <code>answer_key</code> sau khi nộp bài.</div>';return}box.innerHTML=questions.map((q,i)=>{const given=answers[String(i)]??answers[i],correct=Number(key[i]),ok=given!==undefined&&Number(given)===correct,options=q.options||[];return `<div class="review ${ok?'ok':'bad'}"><b>Câu ${i+1}. ${esc(q.question||q.text||'')}</b><div class="answer ${ok?'correct':'wrong'}">${ok?'✅ Đúng':'❌ Sai'}</div><div class="answer">Bạn chọn: <b>${esc(given===undefined?'Chưa trả lời':String.fromCharCode(65+Number(given))+'. '+(options[Number(given)]||''))}</b></div><div class="answer">Đáp án đúng: <b>${esc(key[i]===undefined?'Chưa có đáp án':String.fromCharCode(65+correct)+'. '+(options[correct]||''))}</b></div></div>`}).join('')}
+    async function showHistory(){const studentId=prompt('Nhập MSSV đã dùng khi làm bài:');if(!studentId||!studentId.trim())return;app.innerHTML='<div class="card">⏳ Đang tải lịch sử làm bài...</div>';const result=await sb.from('submissions').select('*').eq('student_id',studentId.trim()).order('submitted_at',{ascending:false});if(result.error)return error(result.error.message);const rows=result.data||[];if(!rows.length){app.innerHTML='<div class="card"><h2>📊 Lịch sử làm bài</h2><div class="notice">📭 Chưa tìm thấy bài làm nào với MSSV này.</div><button class="btn gray" onclick="goLibrary()">📚 Về thư viện</button></div>';return}const ids=[...new Set(rows.map(r=>r.exam_id).filter(Boolean))];const map={};if(ids.length){const er=await sb.from('exams').select('*').in('id',ids);if(er.error)return error(er.error.message);(er.data||[]).forEach(e=>map[e.id]=e)}window.historyRows=rows;window.historyExams=map;let html=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h2>📊 Lịch sử làm bài</h2><p class="muted">${rows.length} lượt làm</p></div><button class="btn gray" onclick="goLibrary()">📚 Về thư viện đề</button></div>`;rows.forEach((row,index)=>{const e=map[row.exam_id]||{};const calc=calculateCurrentResult(row,e);html+=`<div class="history-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h3>${esc(e.title||'Đề thi')}</h3><div class="muted">🕐 ${row.submitted_at?new Date(row.submitted_at).toLocaleString('vi-VN'):'Không rõ thời gian'}</div></div><div class="score">${esc(calc.score)}</div></div><p>✅ ${esc(calc.correct)}/${esc(calc.total)} câu đúng</p><button class="btn gray" onclick="viewHistorySubmission(${index})">📋 Xem bài làm</button></div>`});html+='</div><div id="historyDetail"></div>';app.innerHTML=html}
+    function calculateCurrentResult(row,e){const questions=getQuestions(e);const key=normalizeKey(e.answer_key||e.answers_key||[]);const answers=normalizeAnswers(row.answers||{});let correct=0;questions.forEach((q,i)=>{const given=answers[String(i)]??answers[i];if(given!==undefined&&key[i]!==undefined&&Number(given)===Number(key[i]))correct++});return{correct,total:questions.length,score:questions.length?Math.round(correct/questions.length*10*100)/100:0}}
+    function viewHistorySubmission(index){const row=window.historyRows[index],e=window.historyExams[row.exam_id]||{};const questions=getQuestions(e),key=normalizeKey(e.answer_key||e.answers_key||[]),answers=normalizeAnswers(row.answers||{});let html='<div class="card"><h2>📋 Bài làm: '+esc(e.title||'Đề thi')+'</h2>';questions.forEach((q,i)=>{const given=answers[String(i)]??answers[i],correct=Number(key[i]);html+=`<div class="review"><b>Câu ${i+1}. ${esc(q.question||q.text||'')}</b><div class="answer">Bạn chọn: <b>${esc(given===undefined?'Chưa trả lời':String.fromCharCode(65+Number(given))+'. '+((q.options||[])[Number(given)]||''))}</b></div><div class="answer">Đáp án đúng: <b>${esc(key[i]===undefined?'Chưa có đáp án':String.fromCharCode(65+correct)+'. '+((q.options||[])[correct]||''))}</b></div></div>`});html+='</div>';document.getElementById('historyDetail').innerHTML=html}
     init();
   </script>
 </body>
