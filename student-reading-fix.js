@@ -29,8 +29,8 @@
       return source.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])).replace(/\r\n?/g,'\n').replace(/\n/g,'<br>');
     }
     const doc = new DOMParser().parseFromString(source, 'text/html');
-    const allowed = new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','SPAN','FONT']);
-    const safeCss = new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration']);
+    const allowed = new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','SPAN','FONT','H1','H2','H3','H4','SUB','SUP','MARK']);
+    const safeCss = new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','line-height']);
     function clean(node) {
       Array.from(node.children).forEach(el => {
         if (!allowed.has(el.tagName)) {
@@ -54,6 +54,7 @@
               if (prop === 'font-weight' && !/^(normal|bold|[1-9]00)$/.test(val)) return;
               if (prop === 'font-style' && !/^(normal|italic|oblique)$/.test(val)) return;
               if (prop === 'text-decoration' && !/^[a-z -]+$/i.test(val)) return;
+              if (prop === 'line-height' && !/^[0-9.]+(?:px|pt|em|rem|%)?$/.test(val)) return;
               keep.push(`${prop}:${val}`);
             });
             if (keep.length) el.setAttribute('style', keep.join(';')); else el.removeAttribute('style');
@@ -72,15 +73,42 @@
     return doc.body.innerHTML || '<p><br></p>';
   }
 
+  function installReadingStyle() {
+    if (document.getElementById('english-studio-reading-rich-style')) return;
+    const style = document.createElement('style');
+    style.id = 'english-studio-reading-rich-style';
+    style.textContent = `
+      .reading-text { line-height:1.9; font-size:16px; overflow-wrap:anywhere; }
+      .reading-text p { margin:0 0 14px; }
+      .reading-text div { margin:0 0 10px; }
+      .reading-text strong,.reading-text b { font-weight:700; }
+      .reading-text h1,.reading-text h2,.reading-text h3,.reading-text h4 { margin:0 0 12px; line-height:1.35; }
+      .reading-text ul,.reading-text ol { padding-left:28px; margin:8px 0 14px; }
+      .reading-text mark { padding:0 2px; }
+    `;
+    document.head.appendChild(style);
+  }
+
   function renderFormattedPassage() {
-    if (!window.exam || window.exam.exam_type !== 'reading') return;
     const node = document.querySelector('.reading-text');
     if (!node) return;
-    const value = window.exam.reading_passage || window.exam.reading_text || window.exam.passage || window.exam.content || '';
-    if (node.dataset.richRendered === '1' && node.dataset.richSource === String(value)) return;
-    node.innerHTML = sanitizeReadingHtml(value || 'Chưa có nội dung Reading.');
+
+    // student.html currently renders the stored HTML through esc(), so the DOM
+    // may contain literal tags such as <p>...</p> as text. When that happens,
+    // use textContent as the source and restore the rich formatting here.
+    let value = '';
+    if (window.exam && String(window.exam.exam_type || '').toLowerCase() === 'reading') {
+      value = window.exam.reading_passage || window.exam.reading_text || window.exam.passage || window.exam.content || '';
+    }
+    if (!value) value = node.textContent || node.innerText || '';
+
+    const source = String(value || '');
+    if (node.dataset.richRendered === '1' && node.dataset.richSource === source) return;
+
+    installReadingStyle();
+    node.innerHTML = sanitizeReadingHtml(source || 'Chưa có nội dung Reading.');
     node.dataset.richRendered = '1';
-    node.dataset.richSource = String(value);
+    node.dataset.richSource = source;
   }
 
   window.__renderEnglishStudioReadingPassage = renderFormattedPassage;
@@ -123,6 +151,7 @@
 
   const observer = new MutationObserver(() => renderFormattedPassage());
   function boot() {
+    installReadingStyle();
     if (document.body) observer.observe(document.body, {childList:true, subtree:true});
     renderFormattedPassage();
     let n = 0;
