@@ -111,3 +111,14 @@ window.SUPABASE_CONFIG = {
   s.defer=true;
   document.head.appendChild(s);
 })();
+
+// Listening audio UI helper: show selected filename and preview in manage.html.
+(function(){
+  if(!/manage\.html$/.test(location.pathname))return;
+  if(document.getElementById('audio-ui-fix-script'))return;
+  const s=document.createElement('script');
+  s.id='audio-ui-fix-script';
+  s.src='./audio-ui-fix.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
