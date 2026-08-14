@@ -1,0 +1,66 @@
+name: Fix Listening Audio Filename
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-audio-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch manage.html
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('manage.html')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''function previewAudio(){const input=document.getElementById("audioFile"),status=document.getElementById("audioStatus"),audio=document.getElementById("audioPreview");if(!input?.files?.[0])return;if(localAudioUrl)URL.revokeObjectURL(localAudioUrl);localAudioUrl=URL.createObjectURL(input.files[0]);audio.src=localAudioUrl;audio.classList.remove("hidden");status.textContent="🎵 "+input.files[0].name+" • đã sẵn sàng nghe thử"}'''
+          new = '''function previewAudio(){const input=document.getElementById("audioFile"),status=document.getElementById("audioStatus"),audio=document.getElementById("audioPreview");if(!input||!status)return;const file=input.files?.[0];if(!file){status.textContent="Chưa chọn file";audio?.classList.add("hidden");return}if(localAudioUrl)URL.revokeObjectURL(localAudioUrl);localAudioUrl=URL.createObjectURL(file);if(audio){audio.src=localAudioUrl;audio.classList.remove("hidden")}status.innerHTML="✅ Đã chọn: <b>"+esc(file.name)+"</b> • "+(file.size/1024/1024).toFixed(2)+" MB • sẵn sàng upload"}'''
+
+          if old not in text:
+              raise SystemExit('previewAudio target not found')
+          text = text.replace(old, new, 1)
+
+          old_bind = 'document.getElementById("ct").onchange=updateCreateType;document.getElementById("audioFile").onchange=previewAudio;updateCreateType();'
+          new_bind = 'document.getElementById("ct").onchange=updateCreateType;const audioInput=document.getElementById("audioFile");if(audioInput){audioInput.addEventListener("change",previewAudio);audioInput.addEventListener("input",previewAudio)}updateCreateType();'
+          if old_bind not in text:
+              raise SystemExit('audio binding target not found')
+          text = text.replace(old_bind, new_bind, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manage.html
+          if git diff --cached --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git commit -m "fix: show selected audio filename in listening form"
+          git push
+
+      - name: Remove temporary workflow
+        if: always()
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout main
+          git pull --ff-only
+          git rm -f .github/workflows/fix-audio-filename.yml || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: remove temporary audio UI fix workflow"
+            git push
+          fi
