@@ -71,7 +71,7 @@ window.SUPABASE_CONFIG = {
 (function(){
   if(!/(?:student|reading)\.html$/.test(location.pathname))return;
   if(document.getElementById('student-reading-fix-script'))return;
-  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=5"></script>');
+  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=6"></script>');
 })();
 
 // Reading create/edit compatibility patch.
@@ -82,12 +82,13 @@ window.SUPABASE_CONFIG = {
 })();
 
 // Reading rich-text + responsive layout patch.
+// Only manage.html loads this file. The student page has its own rich-text renderer.
 (function(){
-  if(!/^(student|manage)\.html$/.test(location.pathname))return;
+  if(!/^manage\.html$/.test(location.pathname))return;
   if(document.getElementById('reading-format-fix-script'))return;
   const s=document.createElement('script');
   s.id='reading-format-fix-script';
-  s.src='./reading-format-fix.js?v=3';
+  s.src='./reading-format-fix.js?v=4';
   s.defer=true;
   document.head.appendChild(s);
 })();
