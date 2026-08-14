@@ -8,7 +8,7 @@
   <script src="config.js"></script>
   <style>
     *{box-sizing:border-box}
-    body{margin:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}
+    html,body{margin:0;min-height:100%;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}
     .top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff;padding:28px 18px}
     .wrap{max-width:1200px;margin:auto;padding:20px 16px}
     .card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin:15px 0;box-shadow:0 6px 24px #0f172a0b}
@@ -46,19 +46,20 @@
     .score{font-size:25px;font-weight:900;color:#2563eb}
     audio{width:100%;margin:12px 0}
 
-    /* READING: hai khu vực cuộn độc lập */
-    .reading-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-    .reading-pane,.reading-questions{height:calc(100vh - 210px);min-height:520px;overflow-y:auto;background:#fff;border:1px solid #dbe3ef;border-radius:16px;padding:20px;box-shadow:0 6px 24px #0f172a0b}
-    .reading-title{position:sticky;top:-20px;z-index:5;background:#fff;margin:0 0 14px;padding:4px 0 12px;border-bottom:1px solid #e2e8f0}
+    /* READING: hai khu vực cuộn độc lập, chiếm toàn bộ vùng làm bài */
+    .reading-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch;height:calc(100vh - 185px);min-height:560px}
+    .reading-pane,.reading-questions{height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;background:#fff;border:1px solid #dbe3ef;border-radius:16px;padding:20px;box-shadow:0 6px 24px #0f172a0b;overscroll-behavior:contain;scrollbar-gutter:stable}
+    .reading-title{position:sticky;top:-20px;z-index:5;background:#fff;margin:-20px -20px 14px;padding:20px 20px 12px;border-bottom:1px solid #e2e8f0}
     .reading-text{white-space:pre-wrap;line-height:1.9;font-size:16px;overflow-wrap:anywhere}
     .reading-hint{font-size:13px;color:#64748b;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;margin-bottom:14px}
-    .reading-submit{margin-top:16px}
+    .reading-submit{margin-top:16px;padding-top:8px;padding-bottom:8px;position:sticky;bottom:0;background:linear-gradient(transparent,#fff 35%);z-index:4}
     .reading-pane::-webkit-scrollbar,.reading-questions::-webkit-scrollbar{width:9px}
     .reading-pane::-webkit-scrollbar-thumb,.reading-questions::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
 
     @media(max-width:850px){
-      .reading-layout{grid-template-columns:1fr}
+      .reading-layout{grid-template-columns:1fr;height:auto;min-height:0}
       .reading-pane,.reading-questions{height:55vh;min-height:380px}
+      .reading-questions{margin-top:0}
     }
     @media(max-width:700px){
       .grid{grid-template-columns:1fr}
@@ -190,12 +191,6 @@
       if(typeof data==='string'){try{data=JSON.parse(data)}catch{}}
       if(!data||!data.id) return error('Không nhận được dữ liệu đề thi từ máy chủ.');
 
-      /*
-       * Luôn thử RPC Reading chuyên dụng khi dữ liệu hiện tại chưa xác định
-       * chắc chắn là Reading hoặc chưa có nội dung Reading.
-       * Nếu RPC không tồn tại / đề là Listening thì bỏ qua lỗi và giữ nguyên
-       * dữ liệu cũ, nên Listening vẫn chạy như trước.
-       */
       const currentType=String(data.exam_type||'').toLowerCase();
       if(currentType!=='reading'||!readingText(data)){
         try{
@@ -207,7 +202,7 @@
             if(typeof rd==='string'){try{rd=JSON.parse(rd)}catch{}}
             if(rd?.id&&String(rd.exam_type||'').toLowerCase()==='reading') data={...data,...rd,exam_type:'reading'};
           }
-        }catch(e){/* Listening hoặc RPC cũ: giữ dữ liệu hiện tại */}
+        }catch(e){}
       }
 
       exam=data;
@@ -293,7 +288,6 @@
           </section>
         </div>`;
       }else{
-        /* Listening giữ nguyên kiểu giao diện một cột và audio hiện tại. */
         html+=`<div class="card"><h2>${icon} ${esc(exam.title)}</h2>${exam.audio_url?`<audio controls src="${esc(exam.audio_url)}"></audio>`:''}<div id="questions">${questions.map(renderQuestionBlock).join('')}</div>${submitButton(name,studentId)}</div>`;
       }
 
