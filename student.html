@@ -264,6 +264,28 @@
 
       if (!data || !data.id) return error('❌ Không nhận được dữ liệu đề thi từ máy chủ.');
 
+      /*
+       * Compatibility fix for the existing get_exam_for_student RPC.
+       * Một số phiên bản cũ của RPC chưa trả exam_type/reading_passage,
+       * khiến đề Reading bị nhận nhầm thành Listening ở student.html.
+       * Thử RPC Reading chuyên dụng; nếu không phải Reading thì giữ nguyên
+       * dữ liệu Listening hiện tại, nên Listening không bị ảnh hưởng.
+       */
+      if (!data.exam_type) {
+        const readingResult = await sb.rpc('get_reading_exam_for_student', { p_exam_id: id });
+        if (!readingResult.error && readingResult.data) {
+          let readingData = readingResult.data;
+          if (Array.isArray(readingData)) readingData = readingData[0];
+          if (readingData?.data && Array.isArray(readingData.data)) readingData = readingData.data[0];
+          if (typeof readingData === 'string') {
+            try { readingData = JSON.parse(readingData); } catch {}
+          }
+          if (readingData?.id && readingData.exam_type === 'reading') {
+            data = { ...data, ...readingData };
+          }
+        }
+      }
+
       exam = data;
       showInfo();
     }
@@ -387,7 +409,7 @@
                 Bạn có thể đọc đến đâu tùy ý mà không làm thay đổi vị trí câu hỏi.
               </div>
               <div class="reading-text">${esc(
-                exam.reading_text || exam.passage || exam.content || 'Chưa có nội dung Reading.'
+                exam.reading_passage || exam.reading_text || exam.passage || exam.content || 'Chưa có nội dung Reading.'
               )}</div>
             </section>
 
