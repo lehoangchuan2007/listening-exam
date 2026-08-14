@@ -87,7 +87,7 @@ window.SUPABASE_CONFIG = {
   if(document.getElementById('reading-format-fix-script'))return;
   const s=document.createElement('script');
   s.id='reading-format-fix-script';
-  s.src='./reading-format-fix.js?v=2';
+  s.src='./reading-format-fix.js?v=3';
   s.defer=true;
   document.head.appendChild(s);
 })();
