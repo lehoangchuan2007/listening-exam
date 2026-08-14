@@ -71,14 +71,14 @@ window.SUPABASE_CONFIG = {
 (function(){
   if(!/student\.html$/.test(location.pathname))return;
   if(document.getElementById('student-reading-fix-script'))return;
-  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=2"></script>');
+  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=3"></script>');
 })();
 
 // Reading create/edit compatibility patch.
 (function(){
   if(!/manage\.html$/.test(location.pathname))return;
   if(document.getElementById('manage-reading-fix-script'))return;
-  document.write('<script id="manage-reading-fix-script" src="./manage-reading-fix.js?v=1"></script>');
+  document.write('<script id="manage-reading-fix-script" src="./manage-reading-fix.js?v=2"></script>');
 })();
 
 // Security guard - Step 12.7.
