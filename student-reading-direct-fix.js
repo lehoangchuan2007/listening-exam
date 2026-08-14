@@ -1,21 +1,98 @@
-// English Studio - direct Reading rich-text renderer for students.
-// IMPORTANT: reading_passage is the rich HTML field; reading_text is the legacy plain-text field.
+// English Studio - Reading routing bridge.
+// Student library: send Reading attempts to the same reading.html runtime used by direct Reading links.
+// Reading page: keep the rich-text renderer that already works there.
 (function(){
-  if(window.__ENGLISH_STUDIO_READING_DIRECT_FIX__) return;
-  window.__ENGLISH_STUDIO_READING_DIRECT_FIX__=true;
+  if(window.__ENGLISH_STUDIO_READING_ROUTING_V3__) return;
+  window.__ENGLISH_STUDIO_READING_ROUTING_V3__=true;
+  const isStudent=/\/student\.html$/.test(location.pathname);
+  const isReading=/\/reading\.html$/.test(location.pathname);
   const cfg=window.SUPABASE_CONFIG||{};
-  if(!cfg.url||!cfg.anonKey||!window.supabase?.createClient) return;
+  if(!cfg.url||!cfg.anonKey||!window.supabase?.createClient)return;
   const client=window.supabase.createClient(cfg.url,cfg.anonKey);
-  let rich='',rendered='';
-  function examId(){const m=String(location.hash||'').match(/^#exam=([^&]+)/);return m?decodeURIComponent(m[1]):'';}
-  function decode(v){let s=String(v??'');if(/&lt;\/?[a-z][\s\S]*&gt;/i.test(s)){const t=document.createElement('textarea');t.innerHTML=s;s=t.value;}return s;}
-  function safe(html){const raw=decode(html);if(!/<[a-z][\s\S]*>/i.test(raw))return raw.replace(/\r\n?/g,'\n').split(/\n\n+/).map(p=>'<p>'+p.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])).replace(/\n/g,'<br>')+'</p>').join('');const doc=new DOMParser().parseFromString(raw,'text/html');const allowed=new Set(['P','DIV','BR','SPAN','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','H1','H2','H3','H4','H5','H6','FONT','MARK','SUB','SUP']);const css=new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','color','line-height','background-color']);function clean(root){Array.from(root.children).forEach(el=>{if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return;}Array.from(el.attributes).forEach(a=>{const n=a.name.toLowerCase();if(n==='style'){const keep=[];String(a.value).split(';').forEach(r=>{const [p0,...rest]=r.split(':');const p=String(p0||'').trim().toLowerCase(),v=rest.join(':').trim();if(!css.has(p)||!v||/[<>]/.test(v)||/javascript\s*:/i.test(v))return;if(p==='text-align'&&!/^(left|center|right|justify)$/i.test(v))return;if(p==='font-size'&&!/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(v))return;if(p==='font-weight'&&!/^(normal|bold|[1-9]00)$/.test(v))return;keep.push(p+':'+v)});if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style');}else if(n==='face'&&el.tagName==='FONT'){if(!/^[a-z0-9 ,"'_-]+$/i.test(a.value))el.removeAttribute(a.name);}else if(n==='size'&&el.tagName==='FONT'){if(!/^[1-7]$/.test(a.value))el.removeAttribute(a.name);}else if(n==='color'&&el.tagName==='FONT'){if(!/^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(a.value))el.removeAttribute(a.name);}else el.removeAttribute(a.name);});clean(el);});}clean(doc.body);return doc.body.innerHTML||'';}
-  function render(){if(!rich)return;const node=document.querySelector('.reading-text');if(!node)return;const html=safe(rich);if(rendered===html&&node.dataset.directReadingFix==='1')return;node.innerHTML=html;node.dataset.directReadingFix='1';rendered=html;}
-  async function load(){const id=examId();if(!id)return;try{const r=await client.rpc('get_reading_exam_for_student',{p_exam_id:id});if(r.error)return;let d=r.data;if(Array.isArray(d))d=d[0];if(d?.data&&Array.isArray(d.data))d=d.data[0];if(typeof d==='string'){try{d=JSON.parse(d)}catch{}}
-      // Prefer rich fields. Never let legacy plain reading_text override them.
-      rich=d?.reading_passage||d?.reading_content||d?.passage||d?.content||d?.reading_text||'';
-      if(rich)render();
-    }catch(e){console.error('Reading direct fix:',e)}}
-  function boot(){const style=document.createElement('style');style.textContent='.reading-text{white-space:normal!important;line-height:1.9}.reading-text p{margin:0 0 14px}.reading-text strong,.reading-text b{font-weight:700!important}.reading-text em,.reading-text i{font-style:italic!important}.reading-text u{text-decoration:underline!important}.reading-text p[style*="text-align:justify"],.reading-text div[style*="text-align:justify"]{text-align:justify!important}';document.head.appendChild(style);const observer=new MutationObserver(()=>render());if(document.body)observer.observe(document.body,{childList:true,subtree:true});load();setInterval(render,500);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+  function unwrap(value){
+    if(Array.isArray(value))return value[0]||null;
+    if(value&&Array.isArray(value.data))return value.data[0]||null;
+    if(typeof value==='string'){try{return unwrap(JSON.parse(value))}catch{return null}}
+    return value&&typeof value==='object'?value:null;
+  }
+  function getIdFromHash(){
+    const m=String(location.hash||'').match(/^#exam=([^&]+)/);
+    return m?decodeURIComponent(m[1]):'';
+  }
+  function getIdFromButton(button){
+    const onclick=button?.getAttribute('onclick')||'';
+    const m=onclick.match(/loadExam\(\s*['\"]([^'\"]+)['\"]\s*\)/);
+    return m?m[1]:'';
+  }
+
+  if(isStudent){
+    let readingExamId=getIdFromHash();
+    let readingKnown=!!readingExamId;
+
+    // Capture the library's "Làm bài" click before the inline onclick runs.
+    // This lets us remember the exact exam id without changing student.html.
+    document.addEventListener('click',function(e){
+      const button=e.target.closest?.('button');
+      if(!button)return;
+      const card=button.closest('.exam');
+      if(card && /Làm bài/i.test(button.textContent||'')){
+        const id=getIdFromButton(button);
+        if(id){
+          readingExamId=id;
+          readingKnown=!!card.querySelector('.badge.reading');
+        }
+        return;
+      }
+      if(!/Bắt đầu làm bài/i.test(button.textContent||'')||!readingKnown||!readingExamId)return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      startReadingThroughDedicatedPage(readingExamId).catch(err=>alert('❌ '+(err?.message||err)));
+    },true);
+
+    async function startReadingThroughDedicatedPage(id){
+      const nameEl=document.getElementById('name');
+      const sidEl=document.getElementById('sid');
+      const name=String(nameEl?.value||'').trim();
+      const sid=String(sidEl?.value||'').trim();
+      if(!name||!sid){alert('Vui lòng nhập Họ tên và MSSV.');return;}
+
+      const r=await client.rpc('get_exam_for_student',{p_exam_id:id});
+      if(r.error)throw new Error(r.error.message);
+      const exam=unwrap(r.data);
+      if(!exam?.id)throw new Error('Không nhận được dữ liệu đề thi từ máy chủ.');
+      if(String(exam.exam_type||'').toLowerCase()!=='reading'){
+        // If the stored type was normalized by another RPC, verify through the Reading RPC.
+        const rr=await client.rpc('get_reading_exam_for_student',{p_exam_id:id});
+        if(rr.error)throw new Error(rr.error.message);
+        const rd=unwrap(rr.data);
+        if(!rd?.id||String(rd.exam_type||'').toLowerCase()!=='reading')throw new Error('Đề này không phải Reading.');
+      }
+
+      const now=Date.now();
+      const startAt=exam.start_at?new Date(exam.start_at).getTime():null;
+      const endAt=exam.end_at?new Date(exam.end_at).getTime():null;
+      if(startAt&&now<startAt){alert('⏰ Chưa đến thời gian mở đề.');return;}
+      if(endAt&&now>endAt){alert('⏰ Thời gian thi đã kết thúc.');return;}
+
+      const attempts=await client.rpc('check_exam_attempts',{p_exam_id:id,p_student_id:sid});
+      if(attempts.error)throw new Error(attempts.error.message);
+      const unlimited=2147483647;
+      if(Number(exam.max_attempts)<unlimited&&Number(attempts.data)>=Number(exam.max_attempts||1)){
+        alert('🚫 Bạn đã hết số lần làm bài.');return;
+      }
+
+      const url='./reading.html?exam='+encodeURIComponent(id)+'&name='+encodeURIComponent(name)+'&sid='+encodeURIComponent(sid);
+      location.href=url;
+    }
+  }
+
+  // The dedicated Reading page already has its own rich-text fix in config.js.
+  // This small style is only a safety net for paragraph alignment.
+  if(isReading){
+    const style=document.createElement('style');
+    style.id='english-studio-reading-routing-style';
+    style.textContent='.passage p,.passage div{margin:0 0 14px}.passage [style*="text-align:justify"]{text-align:justify!important}.passage strong,.passage b{font-weight:700}.passage em,.passage i{font-style:italic}.passage u{text-decoration:underline}';
+    (document.head||document.documentElement).appendChild(style);
+  }
 })();
