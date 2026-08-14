@@ -67,6 +67,15 @@ window.SUPABASE_CONFIG = {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 
+// Reading student compatibility patch.
+// Loaded synchronously before student.html creates its Supabase client so it can
+// transparently enrich get_exam_for_student without changing the Listening flow.
+(function(){
+  if(!/student\.html$/.test(location.pathname))return;
+  if(document.getElementById('student-reading-fix-script'))return;
+  document.write('<script id="student-reading-fix-script" src="./student-reading-fix.js?v=1"><\\/script>');
+})();
+
 // Security guard - Step 12.7.
 (function(){
   if(document.getElementById('english-studio-security'))return;
