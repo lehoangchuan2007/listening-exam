@@ -122,3 +122,14 @@ window.SUPABASE_CONFIG = {
   s.defer=true;
   document.head.appendChild(s);
 })();
+
+// Listening Word upload feedback helper.
+(function(){
+  if(!/manage\.html$/.test(location.pathname))return;
+  if(document.getElementById('word-upload-status-fix-script'))return;
+  const s=document.createElement('script');
+  s.id='word-upload-status-fix-script';
+  s.src='./word-upload-status-fix.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
