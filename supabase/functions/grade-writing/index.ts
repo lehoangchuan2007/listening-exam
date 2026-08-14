@@ -1,0 +1,58 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const cors={
+  'Access-Control-Allow-Origin':'*',
+  'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods':'POST, OPTIONS',
+}
+const json=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json'}})
+
+const schema={
+  type:'object',additionalProperties:false,
+  properties:{
+    task_response:{type:'number',minimum:0,maximum:2.5},
+    coherence:{type:'number',minimum:0,maximum:2.5},
+    vocabulary:{type:'number',minimum:0,maximum:2.5},
+    grammar:{type:'number',minimum:0,maximum:2.5},
+    overall_comment:{type:'string'},
+    strengths:{type:'array',items:{type:'string'}},
+    improvements:{type:'array',items:{type:'string'}},
+    grammar_errors:{type:'array',items:{type:'object',additionalProperties:false,properties:{original:{type:'string'},correction:{type:'string'},explanation:{type:'string'}},required:['original','correction','explanation']}},
+    better_phrases:{type:'array',items:{type:'object',additionalProperties:false,properties:{original:{type:'string'},better:{type:'string'}},required:['original','better']}},
+  },
+  required:['task_response','coherence','vocabulary','grammar','overall_comment','strengths','improvements','grammar_errors','better_phrases']
+}
+
+Deno.serve(async req=>{
+  if(req.method==='OPTIONS')return new Response('ok',{headers:cors})
+  try{
+    if(req.method!=='POST')return json({error:'Method not allowed'},405)
+    const auth=req.headers.get('Authorization')||''
+    const token=auth.replace(/^Bearer\s+/i,'')
+    if(!token)return json({error:'Student login required'},401)
+    const supabase=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:`Bearer ${token}`}}})
+    const {data:{user},error:userError}=await supabase.auth.getUser(token)
+    if(userError||!user)return json({error:'Student login required'},401)
+    const body=await req.json();const examId=String(body.exam_id||'');const essay=String(body.essay||'').trim()
+    if(!examId||essay.length<30)return json({error:'Bài viết quá ngắn hoặc thiếu mã đề.'},400)
+    const {data:exam,error:examError}=await supabase.from('exams').select('id,title,description,exam_type,published,start_at,end_at,max_attempts,questions').eq('id',examId).eq('exam_type','writing').eq('published',true).maybeSingle()
+    if(examError||!exam)return json({error:'Đề Writing không tồn tại hoặc chưa mở.'},404)
+    const now=Date.now();if(exam.start_at&&now<new Date(exam.start_at).getTime())return json({error:'Chưa đến thời gian thi.'},400);if(exam.end_at&&now>new Date(exam.end_at).getTime())return json({error:'Thời gian thi đã kết thúc.'},400)
+    const {data:meta}=await supabase.auth.getUser(token);const studentName=String(user.user_metadata?.full_name||'').trim();if(!studentName)return json({error:'Tài khoản chưa có Họ tên. Hãy cập nhật tài khoản trước khi nộp.'},400)
+    const {count}=await supabase.from('writing_submissions').select('id',{count:'exact',head:true}).eq('exam_id',examId).eq('student_user_id',user.id);const max=Number(exam.max_attempts||1);if((count||0)>=max)return json({error:'Bạn đã hết số lần làm bài.'},400)
+
+    const openaiKey=Deno.env.get('OPENAI_API_KEY');if(!openaiKey)return json({error:'Chưa cấu hình OPENAI_API_KEY trên Supabase.'},500)
+    const qs=Array.isArray(exam.questions)?exam.questions:[]
+    const qPrompt=qs.map((q:any,i:number)=>`Task ${i+1}: ${q?.text||q?.question||''}${q?.min_words?` Minimum words: ${q.min_words}.`:''}${q?.max_words?` Maximum words: ${q.max_words}.`:''}`).join('\n')
+    const system=`You are a careful English writing examiner. Grade the student's writing fairly and conservatively. Use exactly four criteria, each from 0 to 2.5: Task Response, Coherence, Vocabulary, Grammar. Total is the sum, 0 to 10. Evaluate the actual task, not the student's identity. Do not invent errors. Quote only short fragments when identifying errors. Give useful Vietnamese feedback while keeping corrected English phrases in English. If the prompt is ambiguous, grade based on the most reasonable interpretation. Return only the requested structured JSON.`
+    const input=`Exam title: ${exam.title}\nTask prompt: ${exam.description||''}\nAdditional task settings:\n${qPrompt||'(none)'}\n\nStudent essay:\n${essay}`
+    const ai=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${openaiKey}`},body:JSON.stringify({model:'gpt-5.4-mini',store:false,reasoning:{effort:'minimal'},input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:input}]}],text:{format:{type:'json_schema',name:'writing_grade',strict:true,schema}}})})
+    const raw=await ai.text();if(!ai.ok)return json({error:'AI chấm bài thất bại.',detail:raw.slice(0,500)},502)
+    const response=JSON.parse(raw);const parsed=JSON.parse(response.output_text)
+    const total=Math.round((Number(parsed.task_response)+Number(parsed.coherence)+Number(parsed.vocabulary)+Number(parsed.grammar))*100)/100
+    const wc=essay.split(/\s+/).filter(Boolean).length
+    const {data:inserted,error:insertError}=await supabase.from('writing_submissions').insert({exam_id:examId,student_user_id:user.id,student_name:studentName,prompt:String(exam.description||exam.title),essay,word_count:wc,task_response:parsed.task_response,coherence:parsed.coherence,vocabulary:parsed.vocabulary,grammar:parsed.grammar,total_score:total,overall_comment:parsed.overall_comment,strengths:parsed.strengths,improvements:parsed.improvements,grammar_errors:parsed.grammar_errors,better_phrases:parsed.better_phrases,ai_model:'gpt-5.4-mini',ai_request_id:response.id}).select('id').single()
+    if(insertError)return json({error:'Không lưu được kết quả chấm AI.'},500)
+    return json({...parsed,total_score:total,word_count:wc,id:inserted.id,ai_model:'gpt-5.4-mini'})
+  }catch(e){return json({error:e instanceof Error?e.message:'Unexpected error'},500)}
+})
