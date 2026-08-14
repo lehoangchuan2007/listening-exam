@@ -81,6 +81,17 @@ window.SUPABASE_CONFIG = {
   document.write('<script id="manage-reading-fix-script" src="./manage-reading-fix.js?v=2"></script>');
 })();
 
+// Reading rich-text + responsive layout patch.
+(function(){
+  if(!/^(student|manage)\.html$/.test(location.pathname))return;
+  if(document.getElementById('reading-format-fix-script'))return;
+  const s=document.createElement('script');
+  s.id='reading-format-fix-script';
+  s.src='./reading-format-fix.js?v=1';
+  s.defer=true;
+  document.head.appendChild(s);
+})();
+
 // Security guard - Step 12.7.
 (function(){
   if(document.getElementById('english-studio-security'))return;
