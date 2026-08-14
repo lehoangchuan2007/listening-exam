@@ -1,6 +1,5 @@
 // English Studio - dedicated Reading submission bridge.
-// reading.html keeps the proven rich-text display; this bridge makes submissions
-// use the same secure submit_exam RPC as the main student page.
+// Reading submissions now use the authenticated Supabase student profile.
 (function(){
   if(!/\/reading\.html$/.test(location.pathname))return;
   if(window.__ENGLISH_STUDIO_READING_RUNTIME__)return;
@@ -10,8 +9,6 @@
   const client=window.supabase.createClient(cfg.url,cfg.anonKey);
   const params=new URLSearchParams(location.search);
   const examId=params.get('exam')||location.hash.slice(6);
-  const passedName=params.get('name')||'';
-  const passedSid=params.get('sid')||'';
   let examData=null;
   let submitting=false;
 
@@ -22,7 +19,7 @@
     return v&&typeof v==='object'?v:null;
   }
   function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-  function questions(){const q=examData?.questions; if(Array.isArray(q))return q;try{return JSON.parse(q||'[]')}catch{return []}}
+  function questions(){const q=examData?.questions;if(Array.isArray(q))return q;try{return JSON.parse(q||'[]')}catch{return []}}
 
   async function loadExam(){
     if(!examId)return;
@@ -30,6 +27,16 @@
       const r=await client.rpc('get_reading_exam_for_student',{p_exam_id:examId});
       if(!r.error)examData=unwrap(r.data);
     }catch(_){ }
+  }
+
+  async function identity(){
+    const r=await client.auth.getSession();
+    const u=r.data?.session?.user;
+    if(!u)return null;
+    return {
+      name:String(u.user_metadata?.full_name||'').trim(),
+      sid:String(u.user_metadata?.student_id||'').trim()
+    };
   }
 
   function collectAnswers(){
@@ -46,21 +53,25 @@
   async function submit(){
     if(submitting)return;
     submitting=true;
-    const name=passedName.trim()||prompt('Nhập họ và tên:')?.trim()||'';
-    if(!name){submitting=false;return;}
-    const sid=passedSid.trim()||prompt('Nhập MSSV:')?.trim()||'';
-    if(!sid){submitting=false;return;}
+    const me=await identity();
+    if(!me?.name||!me?.sid){
+      alert('❌ Tài khoản sinh viên chưa có đầy đủ Họ tên và MSSV. Vui lòng đăng nhập lại.');
+      submitting=false;
+      return;
+    }
     if(!examId){alert('❌ Thiếu mã đề Reading.');submitting=false;return;}
 
     const answers=collectAnswers();
-    const r=await client.rpc('submit_exam',{p_exam_id:examId,p_student_name:name,p_student_id:sid,p_answers:answers});
+    // The server ignores the two legacy identity arguments and uses auth.uid()
+    // plus user_metadata as the authoritative student identity.
+    const r=await client.rpc('submit_exam',{p_exam_id:examId,p_student_name:me.name,p_student_id:me.sid,p_answers:answers});
     if(r.error){alert('❌ '+r.error.message);submitting=false;return;}
 
     let data=unwrap(r.data)||{};
     const total=questions().length;
     const score=data.score??'—';
     const correct=data.correct_count??'—';
-    document.getElementById('app').innerHTML=`<div class="pane" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:30px;text-align:center"><div style="font-size:44px;font-weight:900;color:#2563eb">${esc(score)}</div><h2>🎉 Đã nộp bài thành công!</h2><p>Đúng: ${esc(correct)}/${esc(data.total_questions??total)} câu</p><p class="notice">Họ tên: <b>${esc(name)}</b><br>MSSV: <b>${esc(sid)}</b></p><button class="btn gray" onclick="location.href='./student.html'">📚 Về thư viện đề</button></div>`;
+    document.getElementById('app').innerHTML=`<div class="pane" style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:30px;text-align:center"><div style="font-size:44px;font-weight:900;color:#2563eb">${esc(score)}</div><h2>🎉 Đã nộp bài thành công!</h2><p>Đúng: ${esc(correct)}/${esc(data.total_questions??total)} câu</p><p class="notice">Họ tên: <b>${esc(data.student_name||me.name)}</b><br>MSSV: <b>${esc(data.student_id||me.sid)}</b></p><button class="btn gray" onclick="location.href='./student.html'">📚 Về thư viện đề</button></div>`;
   }
 
   function install(){
@@ -69,14 +80,15 @@
     if(button.dataset.readingRuntimeBound==='1')return;
     button.dataset.readingRuntimeBound='1';
     button.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();submit();},true);
-    if(passedName&&passedSid){
+    identity().then(me=>{
+      if(!me?.name||!me?.sid)return;
       const bar=document.createElement('div');
       bar.className='notice';
       bar.style.margin='0 0 12px';
-      bar.innerHTML='👤 <b>'+esc(passedName)+'</b> • MSSV <b>'+esc(passedSid)+'</b>';
+      bar.innerHTML='👤 <b>'+esc(me.name)+'</b> • MSSV <b>'+esc(me.sid)+'</b>';
       const layout=document.querySelector('.layout');
       if(layout?.parentNode)layout.parentNode.insertBefore(bar,layout);
-    }
+    });
   }
 
   loadExam();
