@@ -60,6 +60,11 @@ create policy "teachers can update own exams" on public.exams
     )
   );
 
+-- Required table privileges in addition to RLS policies.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.exam_folders to authenticated;
+grant select, insert, update, delete on public.exams to authenticated;
+
 -- Helpful view for the teacher UI.
 create or replace view public.teacher_exam_library
 with (security_invoker=true) as
@@ -70,5 +75,4 @@ select
 from public.exams e
 left join public.exam_folders f on f.id=e.folder_id;
 
--- Make sure the view is usable by authenticated teachers under the existing RLS policies.
 grant select on public.teacher_exam_library to authenticated;
