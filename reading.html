@@ -7,77 +7,47 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}
-body{overflow-x:hidden}
-.top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff;padding:20px}
-.wrap{max-width:1400px;margin:auto;padding:18px}
-.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.btn{border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
-.gray{background:#e8eef7;color:#0f172a}
-.timer{font-weight:900;font-size:20px}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-.pane{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:auto;padding:24px;box-shadow:0 5px 20px #0f172a0b;min-width:0}
-.passage{font-size:17px;line-height:1.85;overflow-wrap:anywhere;word-break:normal;color:#0f172a}
-.passage p{margin:0 0 14px}.passage div{margin:0 0 10px}.passage ul,.passage ol{padding-left:28px}.passage img{max-width:100%;height:auto}
-.q{padding:18px 0;border-bottom:1px solid #e2e8f0}.q h3{margin:0 0 12px}
-.choice{display:block;padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0;cursor:pointer;background:#fff}
-.choice:hover{background:#eff6ff}.choice input{margin-right:8px}
-.notice{padding:14px;border-radius:10px;background:#eff6ff;color:#1e40af}.danger{background:#fef2f2;color:#991b1b}
-.result{font-size:36px;font-weight:900;color:#2563eb}
-.passage-wrap{position:relative}
-.passage-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
-.mobile-note{display:none}
-@media(max-width:800px){
-  .top{padding:14px 12px}.wrap{padding:12px}
-  .top h1{font-size:24px;margin:0 0 6px}
-  .timer{font-size:18px}
-  .layout{display:flex;flex-direction:column;gap:12px}
-  .pane{width:100%;max-height:none;overflow:visible;padding:16px;border-radius:14px}
-  .layout>.pane:first-child{order:1}
-  .layout>.pane:nth-child(2){order:2}
-  .passage{font-size:16px;line-height:1.8;white-space:normal;overflow-wrap:anywhere}
-  .mobile-note{display:block;font-size:13px;color:#64748b;margin-top:4px}
-  .q{padding:15px 0}
-  .choice{padding:12px 10px}
-}
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}body{overflow-x:hidden}
+.top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff;padding:20px}.wrap{max-width:1400px;margin:auto;padding:18px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}.btn:disabled{opacity:.55;cursor:not-allowed}.gray{background:#e8eef7;color:#0f172a}
+.timer{font-weight:900;font-size:20px}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}.pane{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:auto;padding:24px;box-shadow:0 5px 20px #0f172a0b;min-width:0}
+.passage{font-size:17px;line-height:1.85;overflow-wrap:anywhere;word-break:normal;color:#0f172a;white-space:normal}.passage p{margin:0 0 14px}.passage div{margin:0 0 10px}.passage ul,.passage ol{padding-left:28px}.passage img{max-width:100%;height:auto}.passage table{max-width:100%;width:100%;border-collapse:collapse;display:block;overflow-x:auto}.passage td,.passage th{border:1px solid #cbd5e1;padding:8px}
+.q{padding:18px 0;border-bottom:1px solid #e2e8f0}.q h3{margin:0 0 12px}.choice{display:block;padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;margin:8px 0;cursor:pointer;background:#fff}.choice:hover{background:#eff6ff}.choice input{margin-right:8px}.notice{padding:14px;border-radius:10px;background:#eff6ff;color:#1e40af}.danger{background:#fef2f2;color:#991b1b}.result{font-size:36px;font-weight:900;color:#2563eb}.mobile-note{font-size:13px;color:#64748b;margin:0 0 12px}.submit-row{margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+@media(max-width:800px){.top{padding:14px 12px}.wrap{padding:12px}.top h1{font-size:24px;margin:0 0 6px}.timer{font-size:18px}.layout{display:flex;flex-direction:column;gap:12px}.pane{width:100%;max-height:none;overflow:visible;padding:16px;border-radius:14px}.passage{font-size:16px;line-height:1.8}.q{padding:15px 0}.choice{padding:12px 10px}.submit-row .btn{width:100%}}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><div class="bar"><div><h1>📖 English Studio - Reading</h1><div id="title">Đang tải đề...</div></div><div class="timer" id="timer">⏱️ --:--</div></div></div></header>
+<header class="top"><div class="wrap"><div class="bar"><div><h1 style="margin:0 0 6px">📖 English Studio - Reading</h1><div id="title">Đang tải đề...</div></div><div class="timer" id="timer">⏱️ --:--</div></div></div></header>
 <main class="wrap"><div id="app"><div class="notice">⏳ Đang tải đề Reading...</div></div></main>
 <script>
 const cfg=window.SUPABASE_CONFIG||{};
-const sb=supabase.createClient(cfg.url,cfg.anonKey);
-const app=document.getElementById('app');
-let exam=null,timer=null;
+const sb=supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+window.READING_EXAM_CLIENT=sb;
+const app=document.getElementById('app');let exam=null,timer=null,submitting=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-function id(){return new URLSearchParams(location.search).get('exam')||location.hash.slice(6)}
+function examId(){return new URLSearchParams(location.search).get('exam')||location.hash.slice(6)}
 function unwrap(v){if(Array.isArray(v))return v[0]||null;if(v&&Array.isArray(v.data))return v.data[0]||null;if(typeof v==='string'){try{return unwrap(JSON.parse(v))}catch{return null}}return v&&typeof v==='object'?v:null}
-function passageSource(d){return String(d?.reading_passage??d?.reading_text??d?.passage??d?.content??'')}
 function decodeHtml(v){let s=String(v??'');if(/&lt;\/?[a-z][\s\S]*&gt;/i.test(s)){const t=document.createElement('textarea');t.innerHTML=s;s=t.value}return s}
-function renderPassage(v){const source=decodeHtml(v);if(!source.trim())return '<p>Chưa có nội dung bài đọc.</p>';if(!/<[a-z][\s\S]*>/i.test(source))return esc(source).replace(/\r\n?/g,'\n').replace(/\n/g,'<br>');const doc=new DOMParser().parseFromString(source,'text/html');const allowed=new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','UL','OL','LI','SPAN','FONT','H1','H2','H3','H4','SUB','SUP','MARK']);function clean(root){Array.from(root.children).forEach(el=>{if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return}Array.from(el.attributes).forEach(a=>{const n=a.name.toLowerCase();if(n==='style'){const keep=[];String(a.value).split(';').forEach(r=>{const [p,...x]=r.split(':');const prop=String(p||'').trim().toLowerCase(),val=x.join(':').trim();if(['font-family','font-size','text-align','font-weight','font-style','text-decoration','line-height','color','background-color'].includes(prop)&&val&&!/[<>]/.test(val)&&!/javascript\s*:/i.test(val))keep.push(prop+':'+val)});if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style')}else if(!(n==='face'||n==='size'||n==='color')||el.tagName!=='FONT')el.removeAttribute(a.name)});clean(el)})}clean(doc.body);return doc.body.innerHTML||'<p>Chưa có nội dung bài đọc.</p>'}
-async function load(){
- const eid=id();if(!eid)return fail('Thiếu mã đề.');
- let r=await sb.rpc('get_reading_exam_for_student',{p_exam_id:eid});
- let d=unwrap(r.data);
- if(r.error||!d?.id){
-   const fallback=await sb.rpc('get_exam_for_student',{p_exam_id:eid});
-   d=unwrap(fallback.data);
- }
- if(!d?.id)return fail(r.error?.message||'Không tìm thấy đề Reading hoặc đề chưa được mở.');
- exam=d;render();
-}
+function passageSource(d){return d?.reading_passage||d?.reading_text||d?.passage||d?.reading_content||d?.content||''}
+function renderPassage(v){let source=decodeHtml(v);if(!source.trim())return '<p>⚠️ Đề này chưa có nội dung bài đọc.</p>';if(!/<[a-z][\s\S]*>/i.test(source)){return source.split(/\r?\n\r?\n+/).map(p=>'<p>'+esc(p).replace(/\r?\n/g,'<br>')+'</p>').join('')}
+ const doc=new DOMParser().parseFromString(source,'text/html');const allowed=new Set(['P','DIV','BR','SPAN','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','H1','H2','H3','H4','H5','H6','FONT','MARK','SUB','SUP','TABLE','THEAD','TBODY','TR','TH','TD','IMG']);
+ const safeCss=new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','color','line-height','background-color']);
+ function clean(root){Array.from(root.children).forEach(el=>{if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return}Array.from(el.attributes).forEach(a=>{const n=a.name.toLowerCase();if(n==='style'){const keep=[];String(a.value).split(';').forEach(rule=>{const [p0,...rest]=rule.split(':');const p=String(p0||'').trim().toLowerCase(),val=rest.join(':').trim();if(!safeCss.has(p)||!val||/[<>]/.test(val)||/javascript\s*:/i.test(val))return;if(p==='text-align'&&!/^(left|center|right|justify)$/i.test(val))return;if(p==='font-size'&&!/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(val))return;if(p==='font-weight'&&!/^(normal|bold|[1-9]00)$/i.test(val))return;keep.push(p+':'+val)});if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style')}else if(n==='face'&&el.tagName==='FONT'){if(!/^[a-z0-9 ,"'_-]+$/i.test(a.value))el.removeAttribute(a.name)}else if(n==='size'&&el.tagName==='FONT'){if(!/^[1-7]$/.test(a.value))el.removeAttribute(a.name)}else if(n==='color'&&el.tagName==='FONT'){if(!/^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(a.value))el.removeAttribute(a.name)}else if(n==='src'&&el.tagName==='IMG'){if(!/^https?:\/\//i.test(a.value))el.removeAttribute(a.name)}else el.removeAttribute(a.name)});clean(el)})}clean(doc.body);return doc.body.innerHTML||'<p>⚠️ Chưa có nội dung bài đọc.</p>'}
+async function getSession(){for(let i=0;i<8;i++){const client=window.STUDENT_AUTH_CLIENT||sb;const r=await client.auth.getSession();if(r.data?.session)return r.data.session;if(i===3){try{const rr=await client.auth.refreshSession();if(rr.data?.session)return rr.data.session}catch(_){}}await new Promise(r=>setTimeout(r,250))}return null}
+async function load(){const eid=examId();if(!eid)return fail('Thiếu mã đề.');const session=await getSession();if(!session)return showLoginRequired();
+ let r=await sb.rpc('get_reading_exam_for_student',{p_exam_id:eid});let d=unwrap(r.data);
+ if(r.error||!d?.id){const fallback=await sb.rpc('get_exam_for_student',{p_exam_id:eid});d=unwrap(fallback.data);if((fallback.error||!d?.id))return fail(r.error?.message||fallback.error?.message||'Không tìm thấy đề Reading hoặc đề chưa được mở.')}
+ const rich=await sb.rpc('get_reading_exam_for_student',{p_exam_id:eid});const rd=unwrap(rich.data);if(!rich.error&&rd?.id)d={...d,...rd,exam_type:'reading'};
+ exam=d;render()}
+function showLoginRequired(){app.innerHTML='<div class="pane"><h2>🔐 Cần đăng nhập sinh viên</h2><div class="notice">Vui lòng đăng nhập tài khoản sinh viên trước khi làm bài Reading.</div><br><button class="btn" onclick="location.href=\'./student.html\'">🔐 Đăng nhập sinh viên</button></div>'}
 function fail(m){app.innerHTML='<div class="pane"><h2>⚠️ Không thể tải đề Reading</h2><div class="notice danger">'+esc(m)+'</div><br><button class="btn gray" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>'}
-function render(){
- const qs=Array.isArray(exam.questions)?exam.questions:[];
- const passage=passageSource(exam);
- document.getElementById('title').textContent=exam.title||'Reading';
- app.innerHTML='<div class="bar" style="margin-bottom:12px"><div><b>📖 Bài Reading</b> • '+qs.length+' câu</div><button class="btn" id="submit">📤 Nộp bài</button></div><div class="layout"><section class="pane"><div class="passage-title"><h2 style="margin:0">📖 Nội dung bài đọc</h2></div><div class="mobile-note">📱 Nội dung bài đọc được hiển thị đầy đủ trên điện thoại.</div><div class="passage" id="passage">'+renderPassage(passage)+'</div></section><section class="pane"><h2>❓ Câu hỏi</h2><div id="questions">'+qs.map((q,i)=>'<div class="q"><h3>Câu '+(i+1)+'. '+esc(q.text||q.question||'')+'</h3>'+((Array.isArray(q.options)?q.options:[]).map((o,j)=>'<label class="choice"><input type="radio" name="q'+i+'" value="'+j+'">'+String.fromCharCode(65+j)+'. '+esc(o)+'</label>').join('')||'<textarea name="q'+i+'" style="width:100%;min-height:100px;padding:10px;border:1px solid #cbd5e1;border-radius:10px" placeholder="Nhập câu trả lời..."></textarea>')+'</div>').join('')+'</div></section></div>';
- document.getElementById('submit').onclick=submit;startTimer();
-}
-function startTimer(){let left=Math.max(0,Number(exam.duration_minutes||60)*60);const tick=()=>{const m=Math.floor(left/60),s=left%60;document.getElementById('timer').textContent='⏱️ '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');if(left<=0){clearInterval(timer);submit(true);return}left--};tick();timer=setInterval(tick,1000)}
-async function submit(auto=false){if(!auto&&!confirm('Bạn chắc chắn muốn nộp bài?'))return;clearInterval(timer);const params=new URLSearchParams(location.search);const name=params.get('name')||prompt('Nhập họ và tên:');if(!name)return;const sid=params.get('sid')||prompt('Nhập MSSV:');if(!sid)return;const answers={};const qs=Array.isArray(exam.questions)?exam.questions:[];qs.forEach((q,i)=>{const checked=document.querySelector('input[name="q'+i+'"]:checked');const text=document.querySelector('textarea[name="q'+i+'"]');answers[String(i)]=checked?Number(checked.value):(text?text.value:'')});const r=await sb.from('submissions').insert({exam_id:exam.id,student_name:name.trim(),student_id:sid.trim(),answers,submitted_at:new Date().toISOString()});if(r.error){app.innerHTML='<div class="pane"><h2>❌ Nộp bài thất bại</h2><div class="notice danger">'+esc(r.error.message)+'</div></div>';return}app.innerHTML='<div class="pane"><h2>✅ Nộp bài thành công!</h2><p>Bài Reading của bạn đã được ghi nhận.</p><button class="btn" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>'}
+function render(){const qs=Array.isArray(exam.questions)?exam.questions:(typeof exam.questions==='string'?(()=>{try{return JSON.parse(exam.questions)}catch{return[]}})():[]);document.getElementById('title').textContent=exam.title||'Reading';
+ app.innerHTML='<div class="bar" style="margin-bottom:12px"><div><b>📖 Bài Reading</b> • '+qs.length+' câu</div><button class="btn" id="submit">📤 Nộp bài</button></div><div class="layout"><section class="pane"><div><h2 style="margin:0 0 6px">📖 Nội dung bài đọc</h2><div class="mobile-note">📱 Nội dung bài đọc được hiển thị đầy đủ trên điện thoại.</div></div><div class="passage" id="passage">'+renderPassage(passageSource(exam))+'</div></section><section class="pane"><h2 style="margin-top:0">❓ Câu hỏi</h2><div id="questions">'+qs.map((q,i)=>'<div class="q"><h3>Câu '+(i+1)+'. '+esc(q.text||q.question||'')+'</h3>'+((Array.isArray(q.options)?q.options:[]).map((o,j)=>'<label class="choice"><input type="radio" name="q'+i+'" value="'+j+'"> '+String.fromCharCode(65+j)+'. '+esc(o)+'</label>').join('')||'<textarea name="q'+i+'" style="width:100%;min-height:100px;padding:10px;border:1px solid #cbd5e1;border-radius:10px" placeholder="Nhập câu trả lời..."></textarea>')+'</div>').join('')+'</div></section></div>';
+ document.getElementById('submit').onclick=()=>submit(false);startTimer()}
+function startTimer(){let left=Math.max(0,Number(exam.duration_minutes||60)*60);const tick=()=>{const el=document.getElementById('timer');if(!el)return;const m=Math.floor(left/60),s=left%60;el.textContent='⏱️ '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');if(left<=0){clearInterval(timer);submit(true);return}left--};tick();clearInterval(timer);timer=setInterval(tick,1000)}
+function collectAnswers(){const qs=Array.isArray(exam.questions)?exam.questions:[];return qs.map((q,i)=>{const c=document.querySelector('input[name="q'+i+'"]:checked');if(c)return Number(c.value);const t=document.querySelector('textarea[name="q'+i+'"]');return t?.value||''})}
+async function submit(auto){if(submitting)return;if(!auto&&!confirm('Bạn chắc chắn muốn nộp bài?'))return;const session=await getSession();if(!session){showLoginRequired();return}const answers=collectAnswers();if(answers.some(v=>v===null||v==='')){alert('Vui lòng trả lời đầy đủ các câu trước khi nộp bài.');return}submitting=true;const btn=document.getElementById('submit');if(btn){btn.disabled=true;btn.textContent='⏳ Đang nộp bài...'};try{const meta=session.user?.user_metadata||{},name=String(meta.full_name||'').trim(),sid=String(meta.student_id||'').trim();if(!name){alert('❌ Tài khoản chưa có Họ tên. Vào ☰ → Tài khoản → Cập nhật tài khoản để bổ sung.');if(btn){btn.disabled=false;btn.textContent='📤 Nộp bài'};return}const r=await sb.rpc('submit_exam',{p_exam_id:exam.id,p_student_name:name,p_student_id:exam.student_id||sid,p_answers:answers});if(r.error){alert('❌ '+r.error.message);if(btn){btn.disabled=false;btn.textContent='📤 Nộp bài'};return}clearInterval(timer);const d=unwrap(r.data)||{};app.innerHTML='<div class="pane" style="text-align:center;padding:30px"><div class="result">'+esc(d.score??0)+'/10</div><h2>🎉 Đã nộp bài thành công!</h2><p>Đúng: <b>'+esc(d.correct_count??0)+'/'+esc(d.total_questions??answers.length)+'</b> câu</p><p class="notice">Họ tên: <b>'+esc(d.student_name||name)+'</b>'+(d.student_id?'<br>MSSV: <b>'+esc(d.student_id)+'</b>':'')+'</p><button class="btn" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>'}finally{submitting=false}}
+window.__englishStudioSubmitReading=submit;
 load();
 </script>
 </body>
