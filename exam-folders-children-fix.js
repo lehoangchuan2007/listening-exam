@@ -6,29 +6,38 @@
   const db=supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   let folders=[];
+  let observer=null;
+  let injecting=false;
+  let lastSignature='';
   const getActive=()=>document.querySelector('.ef-folder.active')?.dataset?.id||'__all__';
-  const getParent=id=>folders.find(f=>String(f.id)===String(id));
   function inject(){
+    if(injecting)return;
     const section=document.querySelector('.ef-shell section');
     const toolbar=section?.querySelector('.ef-toolbar');
     const list=document.getElementById('ef-list');
     if(!section||!toolbar||!list)return;
-    document.getElementById('ef-child-folders')?.remove();
     const active=getActive();
-    if(active==='__all__'||active==='__uncategorized__')return;
-    const kids=folders.filter(f=>String(f.parent_id||'')===String(active)).sort((a,b)=>a.name.localeCompare(b.name,'vi'));
-    if(!kids.length)return;
-    const box=document.createElement('div');
-    box.id='ef-child-folders';
-    box.innerHTML=`<div class="ef-child-title">📁 Thư mục con</div><div class="ef-child-grid">${kids.map(f=>{
-      const count=document.querySelectorAll(`.ef-exam`).length;
-      return `<button class="ef-child-card" data-child-id="${f.id}"><span>📁</span><strong>${esc(f.name)}</strong><small>Thư mục con</small></button>`;
-    }).join('')}</div>`;
-    toolbar.insertAdjacentElement('afterend',box);
-    box.querySelectorAll('[data-child-id]').forEach(btn=>btn.addEventListener('click',()=>{
-      const target=document.querySelector(`.ef-folder[data-id="${btn.dataset.childId}"]`);
-      if(target)target.click();
-    }));
+    const kids=(active==='__all__'||active==='__uncategorized__')?[]:folders.filter(f=>String(f.parent_id||'')===String(active)).sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+    const signature=active+'|'+kids.map(f=>f.id+':'+f.name).join(',');
+    if(signature===lastSignature)return;
+    lastSignature=signature;
+    injecting=true;
+    if(observer)observer.disconnect();
+    try{
+      document.getElementById('ef-child-folders')?.remove();
+      if(!kids.length)return;
+      const box=document.createElement('div');
+      box.id='ef-child-folders';
+      box.innerHTML=`<div class="ef-child-title">📁 Thư mục con</div><div class="ef-child-grid">${kids.map(f=>`<button class="ef-child-card" data-child-id="${esc(f.id)}"><span>📁</span><strong>${esc(f.name)}</strong><small>Thư mục con</small></button>`).join('')}</div>`;
+      toolbar.insertAdjacentElement('afterend',box);
+      box.querySelectorAll('[data-child-id]').forEach(btn=>btn.addEventListener('click',()=>{
+        const target=document.querySelector(`.ef-folder[data-id="${btn.dataset.childId}"]`);
+        if(target)target.click();
+      }));
+    }finally{
+      injecting=false;
+      if(observer)observer.observe(document.body,{childList:true,subtree:true});
+    }
   }
   function style(){
     if(document.getElementById('ef-child-style'))return;
@@ -44,10 +53,10 @@
   async function load(){
     const session=await db.auth.getSession();if(!session.data?.session)return;
     const r=await db.from('exam_folders').select('id,name,parent_id').order('name',{ascending:true});
-    if(!r.error){folders=r.data||[];inject();}
+    if(!r.error){folders=r.data||[];lastSignature='';inject();}
   }
   style();
-  const observer=new MutationObserver(()=>{if(document.querySelector('.ef-shell'))inject();});
+  observer=new MutationObserver(()=>{if(!injecting)inject();});
   observer.observe(document.body,{childList:true,subtree:true});
   setTimeout(load,300);
   setTimeout(load,1200);
