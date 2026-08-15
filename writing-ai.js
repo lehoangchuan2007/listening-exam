@@ -10,7 +10,8 @@ function normalize(v){if(Array.isArray(v))return v[0]||null;if(v?.data&&Array.is
 async function load(){
  if(!id()){app.innerHTML='<div class="card">❌ Thiếu mã đề. <button class="btn gray" onclick="back()">← Quay lại</button></div>';return}
  const {data:{session}}=await sb.auth.getSession();if(!session){location.href='./student.html';return}
- let r=await sb.rpc('get_writing_exam_for_student',{p_exam_id:id()});let data=!r.error?normalize(r.data):null;
+ let r=await sb.rpc('get_writing_exam_for_student_v2',{p_exam_id:id()});let data=!r.error?normalize(r.data):null;
+ if(!data){r=await sb.rpc('get_writing_exam_for_student',{p_exam_id:id()});data=!r.error?normalize(r.data):null}
  if(!data){r=await sb.rpc('get_exam_for_student',{p_exam_id:id()});data=!r.error?normalize(r.data):null}
  if(!data||String(data.exam_type||'').toLowerCase()!=='writing'){app.innerHTML=`<div class="card"><h2>❌ Không tải được đề Writing</h2><p>${esc(r?.error?.message||'Đề không tồn tại, chưa được công khai hoặc dữ liệu Writing chưa được trả về từ Supabase.')}</p><button class="btn gray" onclick="back()">← Quay về thư viện</button></div>`;return}
  exam=data;draftKey=`english-studio-writing-draft-${exam.id}-${session.user.id}`;render()
