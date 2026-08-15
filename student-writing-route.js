@@ -1,69 +1,15 @@
-/* English Studio - Writing library + dedicated route */
+/* English Studio - Writing library + dedicated route v3 */
 (function(){
   if(!/student\.html$/.test(location.pathname))return;
-
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const UNLIMITED=2147483647;
-  let loaded=false;
-
-  function examIdFromButton(btn){
-    const raw=btn?.getAttribute('onclick')||'';
-    const m=raw.match(/loadExam\(\s*['"]([^'"]+)['"]\s*\)/);
-    return m?m[1]:null;
-  }
-  function isWritingButton(btn){
-    const card=btn?.closest('.exam');
-    return !!card?.querySelector('.badge.writing');
-  }
-
-  // Capture the click before the inline onclick on student.html can call the
-  // generic multiple-choice/Listening loader.
-  document.addEventListener('click',function(ev){
-    const btn=ev.target.closest('.exam .btn');
-    if(!btn||!isWritingButton(btn))return;
-    const id=examIdFromButton(btn);
-    if(!id)return;
-    ev.preventDefault();
-    ev.stopPropagation();
-    ev.stopImmediatePropagation();
-    location.href='./writing.html?exam='+encodeURIComponent(id);
-  },true);
-
-  async function addPublishedWritingExams(){
-    if(loaded)return;
-    const client=window.STUDENT_EXAM_CLIENT;
-    const list=document.getElementById('list');
-    if(!client||!list)return;
-    const {data,error}=await client.rpc('get_published_writing_exams_for_student');
-    if(error||!Array.isArray(data)||!data.length)return;
-    const rows=data.filter(e=>e&&e.id);
-    if(!rows.length)return;
-
-    // Avoid duplicates if the normal library RPC is later updated to include Writing.
-    rows.forEach(e=>{
-      if(list.querySelector(`[data-writing-exam-id="${CSS.escape(String(e.id))}"]`))return;
-      const card=document.createElement('div');
-      card.className='exam';
-      card.setAttribute('data-writing-exam-id',String(e.id));
-      const maxText=Number(e.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':`${Number(e.max_attempts||1)} lần`;
-      card.innerHTML=`<span class="badge writing">✍️ Writing</span><h2>${esc(e.title)}</h2><p class="muted">${esc(e.description||'Chưa có mô tả')}</p><p>📝 Writing &nbsp;•&nbsp; ⏱️ ${esc(e.duration_minutes||60)} phút &nbsp;•&nbsp; 🔢 ${esc(maxText)}</p><button class="btn" onclick="loadExam('${esc(e.id)}')">🚀 Làm bài</button>`;
-      list.appendChild(card);
-    });
-    loaded=true;
-  }
-
-  function boot(){
-    addPublishedWritingExams();
-    // The main student page renders #list asynchronously, so retry briefly
-    // until that container exists and the Auth session is ready.
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      addPublishedWritingExams();
-      if(loaded||tries>40)clearInterval(timer);
-    },500);
-  }
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
+  let done=false;
+  function go(id){location.href='./writing.html?exam='+encodeURIComponent(id)}
+  function isWritingCard(card){if(!card)return false;const badge=card.querySelector('.badge');const text=(card.textContent||'').toLowerCase();return !!(badge?.classList.contains('writing') || /\bwriting\b/.test(text))}
+  function upgradeCard(card,id){if(!card||!id)return;card.dataset.writingExamId=id;const badge=card.querySelector('.badge');if(badge){badge.className='badge writing';badge.textContent='✍️ Writing'}const btn=card.querySelector('.btn');if(btn){btn.type='button';btn.removeAttribute('onclick');btn.onclick=e=>{e.preventDefault();e.stopPropagation();go(id)}}}
+  function renderWritingRows(rows){const list=document.getElementById('list');if(!list)return;rows.forEach(e=>{if(!e?.id)return;const existing=list.querySelector(`[data-writing-exam-id="${CSS.escape(String(e.id))}"]`);if(existing){upgradeCard(existing,e.id);return}const same=[...list.querySelectorAll('.exam')].find(c=>String(c.querySelector('h2')?.textContent||'').trim()===String(e.title||'').trim());if(same){upgradeCard(same,e.id);return}const card=document.createElement('div');card.className='exam';card.innerHTML=`<span class="badge writing">✍️ Writing</span><h2>${esc(e.title)}</h2><p class="muted">${esc(e.description||'Chưa có mô tả')}</p><p>📝 Writing &nbsp;•&nbsp; ⏱️ ${esc(e.duration_minutes||60)} phút &nbsp;•&nbsp; 🔢 ${Number(e.max_attempts)>=UNLIMITED?'♾️ Không giới hạn':esc(Number(e.max_attempts||1)+' lần')}</p><button class="btn" type="button">🚀 Làm bài</button>`;upgradeCard(card,e.id);list.appendChild(card)})}
+  async function fetchRows(client){let r=await client.rpc('get_published_writing_exams_for_student');if(!r.error&&Array.isArray(r.data)&&r.data.length)return r.data;r=await client.from('exams').select('id,title,description,duration_minutes,max_attempts,writing_prompt,writing_rubric,exam_type,published').eq('exam_type','writing').eq('published',true).order('created_at',{ascending:false});if(!r.error&&Array.isArray(r.data))return r.data;return []}
+  async function boot(){const client=window.STUDENT_EXAM_CLIENT||window.supabase?.createClient?.((window.SUPABASE_CONFIG||{}).url,(window.SUPABASE_CONFIG||{}).anonKey);if(!client)return;let tries=0;const timer=setInterval(async()=>{tries++;const list=document.getElementById('list');if(!list){if(tries>30)clearInterval(timer);return}const rows=await fetchRows(client);if(rows.length){renderWritingRows(rows);done=true;clearInterval(timer);return}[...list.querySelectorAll('.exam')].forEach(card=>{if(!isWritingCard(card))return;const raw=card.querySelector('.btn')?.getAttribute('onclick')||'';const m=raw.match(/loadExam\(\s*['"]([^'"]+)['"]\s*\)/);if(m)upgradeCard(card,m[1])});if(done||tries>30)clearInterval(timer)},500)}
+  document.addEventListener('click',e=>{const btn=e.target.closest('.exam .btn');if(!btn)return;const card=btn.closest('.exam');if(!isWritingCard(card))return;const id=card.dataset.writingExamId;if(id){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();go(id)}},true);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
