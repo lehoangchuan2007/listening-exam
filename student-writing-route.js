@@ -1,21 +1,25 @@
 /* English Studio - route Writing exams to the dedicated Writing page */
 (function(){
   if(!/student\.html$/.test(location.pathname))return;
-  function install(){
-    if(typeof window.loadExam!=='function'||window.__writingRouteInstalled)return;
-    window.__writingRouteInstalled=true;
-    const original=window.loadExam;
-    window.loadExam=async function(id){
-      try{
-        const list=Array.isArray(window.exams)?window.exams:[];
-        const found=list.find(x=>String(x.id)===String(id));
-        if(found&&String(found.exam_type||'').toLowerCase()==='writing'){
-          location.href='./writing.html?exam='+encodeURIComponent(id);
-          return;
-        }
-      }catch(e){}
-      return original(id);
-    };
+  function examIdFromButton(btn){
+    const raw=btn?.getAttribute('onclick')||'';
+    const m=raw.match(/loadExam\(\s*['"]([^'"]+)['"]\s*\)/);
+    return m?m[1]:null;
   }
-  let tries=0;const t=setInterval(()=>{install();if(window.__writingRouteInstalled||++tries>40)clearInterval(t)},100);
+  function isWritingButton(btn){
+    const card=btn?.closest('.exam');
+    return !!card?.querySelector('.badge.writing');
+  }
+  // Capture the click before the inline onclick on student.html can call the
+  // generic multiple-choice/Listening loader.
+  document.addEventListener('click',function(ev){
+    const btn=ev.target.closest('.exam .btn');
+    if(!btn||!isWritingButton(btn))return;
+    const id=examIdFromButton(btn);
+    if(!id)return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    ev.stopImmediatePropagation();
+    location.href='./writing.html?exam='+encodeURIComponent(id);
+  },true);
 })();
