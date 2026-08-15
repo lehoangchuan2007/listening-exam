@@ -37,23 +37,10 @@
   <script>
     const cfg=window.SUPABASE_CONFIG||{};
     const sb=supabase.createClient(cfg.url,cfg.anonKey);
-    // Expose the exam client so the authentication gate can synchronize a
-    // newly-created Auth session into this client in the same browser tab.
     window.STUDENT_EXAM_CLIENT=sb;
     const app=document.getElementById('app'); let exams=[]; let exam=null; let timer=null; const UNLIMITED=2147483647;
     const esc=(value)=>String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-    // Reading is stored as rich HTML by the teacher. Render it safely on the student page.
-    function readingRichHtml(value){
-      let raw=String(value??'');
-      if(/&lt;\/?[a-z][\s\S]*&gt;/i.test(raw)){const box=document.createElement('textarea');box.innerHTML=raw;raw=box.value;}
-      if(!/<[a-z][\s\S]*>/i.test(raw))return raw.replace(/\r\n?/g,'\n').split(/\n\n+/).map(p=>`<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
-      const doc=new DOMParser().parseFromString(raw,'text/html');
-      const allowed=new Set(['P','DIV','BR','SPAN','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','H1','H2','H3','H4','H5','H6','FONT','MARK','SUB','SUP']);
-      const safeCss=new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','color','line-height','background-color']);
-      const clean=(root)=>Array.from(root.children).forEach(el=>{if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return;}Array.from(el.attributes).forEach(a=>{const n=a.name.toLowerCase();if(n==='style'){const keep=[];String(a.value).split(';').forEach(rule=>{const [p0,...rest]=rule.split(':');const p=String(p0||'').trim().toLowerCase(),v=rest.join(':').trim();if(!safeCss.has(p)||!v||/[<>]/.test(v)||/javascript\s*:/i.test(v))return;if(p==='text-align'&&!/^(left|center|right|justify)$/i.test(v))return;if(p==='font-size'&&!/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(v))return;if(p==='font-weight'&&!/^(normal|bold|[1-9]00)$/i.test(v))return;keep.push(p+':'+v)});if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style');}else if(n==='face'&&el.tagName==='FONT'){if(!/^[a-z0-9 ,"'_-]+$/i.test(a.value))el.removeAttribute(a.name)}else if(n==='size'&&el.tagName==='FONT'){if(!/^[1-7]$/.test(a.value))el.removeAttribute(a.name)}else if(n==='color'&&el.tagName==='FONT'){if(!/^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(a.value))el.removeAttribute(a.name)}else el.removeAttribute(a.name);});clean(el);});
-      clean(doc.body);return doc.body.innerHTML||'<p><br></p>';
-    }
+    function readingRichHtml(value){let raw=String(value??'');if(/&lt;\/?[a-z][\s\S]*&gt;/i.test(raw)){const box=document.createElement('textarea');box.innerHTML=raw;raw=box.value;}if(!/<[a-z][\s\S]*>/i.test(raw))return raw.replace(/\r\n?/g,'\n').split(/\n\n+/).map(p=>`<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');const doc=new DOMParser().parseFromString(raw,'text/html');const allowed=new Set(['P','DIV','BR','SPAN','B','STRONG','I','EM','U','S','STRIKE','UL','OL','LI','H1','H2','H3','H4','H5','H6','FONT','MARK','SUB','SUP']);const safeCss=new Set(['font-family','font-size','text-align','font-weight','font-style','text-decoration','color','line-height','background-color']);const clean=(root)=>Array.from(root.children).forEach(el=>{if(!allowed.has(el.tagName)){const p=el.parentNode;while(el.firstChild)p.insertBefore(el.firstChild,el);el.remove();return;}Array.from(el.attributes).forEach(a=>{const n=a.name.toLowerCase();if(n==='style'){const keep=[];String(a.value).split(';').forEach(rule=>{const [p0,...rest]=rule.split(':');const p=String(p0||'').trim().toLowerCase(),v=rest.join(':').trim();if(!safeCss.has(p)||!v||/[<>]/.test(v)||/javascript\s*:/i.test(v))return;if(p==='text-align'&&!/^(left|center|right|justify)$/i.test(v))return;if(p==='font-size'&&!/^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(v))return;if(p==='font-weight'&&!/^(normal|bold|[1-9]00)$/i.test(v))return;keep.push(p+':'+v)});if(keep.length)el.setAttribute('style',keep.join(';'));else el.removeAttribute('style');}else if(n==='face'&&el.tagName==='FONT'){if(!/^[a-z0-9 ,"'_-]+$/i.test(a.value))el.removeAttribute(a.name)}else if(n==='size'&&el.tagName==='FONT'){if(!/^[1-7]$/.test(a.value))el.removeAttribute(a.name)}else if(n==='color'&&el.tagName==='FONT'){if(!/^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(a.value))el.removeAttribute(a.name)}else el.removeAttribute(a.name);});clean(el);});clean(doc.body);return doc.body.innerHTML||'<p><br></p>'}
     function parseJson(value,fallback=[]){if(typeof value!=='string')return value??fallback;try{return JSON.parse(value)}catch{return fallback}}
     function normalizeKey(key){key=parseJson(key,[]);if(Array.isArray(key))return key;if(key&&typeof key==='object')return Object.values(key);return []}
     function normalizeAnswers(answers){answers=parseJson(answers,{});return answers&&typeof answers==='object'?answers:{}}
@@ -76,9 +63,8 @@
     function showReview(answers){const qs=getQuestions(exam),key=window.__lastKey||[];let html='<div class="card" style="margin-top:15px"><h2>📋 Chi tiết bài làm</h2>';qs.forEach((q,i)=>{const given=answers[i],correct=key[i],ok=given!==null&&String(given)===String(correct),opts=q.options||[];html+=`<div class="review ${ok?'ok':'bad'}"><b>Câu ${i+1}. ${esc(q.text||q.question||'')}</b><div class="answer ${ok?'correct':'wrong'}">${ok?'✅ Đúng':'❌ Sai'}</div><div class="answer">Bạn chọn: <b>${given===null?'Chưa trả lời':`${letter(given)}. ${esc(opts[Number(given)]??'')}`}</b></div><div class="answer">Đáp án đúng: <b>${correct===undefined?'—':`${letter(correct)}. ${esc(opts[Number(correct)]??'')}`}</b></div></div>`});html+='</div>';document.getElementById('reviewBox').innerHTML=html}
     function startTimer(minutes){let sec=Math.max(1,minutes*60);const el=document.getElementById('timer');clearInterval(timer);timer=setInterval(()=>{sec--;if(sec<=0){clearInterval(timer);submitExam();return;}const m=Math.floor(sec/60),s=String(sec%60).padStart(2,'0');el.textContent=`⏱️ ${m}:${s}`},1000)}
     function goLibrary(){clearInterval(timer);location.hash='';loadList()}
-    async function showHistory(){return window.__originalShowHistory?window.__originalShowHistory():loadList()}
+    function showHistory(){location.href='./history.html'}
     window.goLibrary=goLibrary;window.loadExam=loadExam;window.showHistory=showHistory;window.submitExam=submitExam;
-    window.__originalShowHistory=window.showHistory;
     init();
   </script>
 </body>
