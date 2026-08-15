@@ -1,1 +1,71 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lịch sử làm bài - Listening Practice</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}.top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff;padding:28px 18px}.wrap{max-width:1050px;margin:auto;padding:20px 16px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin:15px 0;box-shadow:0 6px 24px #0f172a0b}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px}.btn{border:0;border-radius:10px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}.btn.gray{background:#e8eef7;color:#0f172a}.muted{color:#64748b;font-size:14px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.item{border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin:12px 0}.score{font-size:26px;font-weight:900;color:#2563eb}.review{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:10px 0}.ok{border-left:5px solid #16a34a;background:#f0fdf4}.bad{border-left:5px solid #dc2626;background:#fef2f2}.answer{background:#fff;border-radius:8px;padding:8px;margin-top:7px}.correct{color:#15803d;font-weight:800}.wrong{color:#b91c1c;font-weight:800}.hidden{display:none}.notice{padding:13px;border-radius:10px;background:#eff6ff;color:#1e40af}.danger{background:#fef2f2;color:#991b1b}@media(max-width:600px){.wrap{padding:15px 11px}}</style></head><body><header class="top"><div class="wrap"><h1>📊 Lịch sử làm bài</h1><div>🧑‍🎓 Xem lại kết quả các bài đã làm</div></div></header><main class="wrap"><div class="card"><div class="row"><div><h2>🔎 Tra cứu lịch sử</h2><p class="muted">Nhập MSSV đã dùng khi làm bài.</p></div><button class="btn gray" onclick="location.href='./student.html'">📚 Về thư viện đề</button></div><div class="field"><label>MSSV</label><input id="sid" placeholder="Ví dụ: B1234567"></div><button class="btn" onclick="loadHistory()">🔍 Xem lịch sử</button></div><div id="app"></div></main><script>const cfg=window.SUPABASE_CONFIG||{};const sb=supabase.createClient(cfg.url,cfg.anonKey);const app=document.getElementById('app');const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));let rows=[],exams={};function letter(i){return i==null?'':String.fromCharCode(65+Number(i))}async function loadHistory(){const sid=document.getElementById('sid').value.trim();if(!sid)return alert('Vui lòng nhập MSSV.');app.innerHTML='<div class="card">⏳ Đang tải lịch sử...</div>';const r=await sb.from('submissions').select('*').eq('student_id',sid).order('submitted_at',{ascending:false});if(r.error){app.innerHTML='<div class="card notice danger">❌ '+esc(r.error.message)+'</div>';return}rows=r.data||[];if(!rows.length){app.innerHTML='<div class="card notice">📭 Chưa tìm thấy bài làm nào với MSSV này.</div>';return}const ids=[...new Set(rows.map(x=>x.exam_id).filter(Boolean))];if(ids.length){const e=await sb.from('exams').select('*').in('id',ids);if(!e.error)(e.data||[]).forEach(x=>exams[x.id]=x)}render()}function render(){app.innerHTML='<div class="card"><div class="row"><h2>📚 Các bài đã làm</h2><span class="muted">'+rows.length+' lượt làm</span></div>'+rows.map((r,i)=>{const e=exams[r.exam_id]||{};return '<div class="item"><div class="row"><div><h3>'+esc(e.title||'Đề thi')+'</h3><div class="muted">🕐 '+(r.submitted_at?new Date(r.submitted_at).toLocaleString('vi-VN'):'Không rõ thời gian')+'</div></div><div class="score">'+esc(r.score??'—')+'</div></div><p>✅ '+esc(r.correct_count??0)+'/'+esc(r.total_questions??0)+' câu đúng</p><button class="btn gray" onclick="view('+i+')">📋 Xem bài làm</button></div>'}).join('')+'</div><div id="detail"></div>'}function view(i){const r=rows[i],e=exams[r.exam_id]||{};let answers=r.answers||{};if(typeof answers==='string')try{answers=JSON.parse(answers)}catch{answers={}}let key=e.answer_key||[];if(typeof key==='string')try{key=JSON.parse(key)}catch{key=[]}let qs=e.questions??e.question??[];if(typeof qs==='string')try{qs=JSON.parse(qs)}catch{qs=[]}if(!Array.isArray(key))key=Object.values(key||{});if(!Array.isArray(qs)){app.innerHTML+='<div class="card notice danger">Không thể đọc câu hỏi của đề.</div>';return}let html='<div class="card"><div class="row"><h2>📋 '+esc(e.title||'Bài làm')+'</h2><button class="btn gray" onclick="document.getElementById(\'detail\').innerHTML=\'\'">Đóng</button></div><p class="muted">Điểm: '+esc(r.score)+' • Đúng: '+esc(r.correct_count)+'/'+esc(r.total_questions)+'</p>';qs.forEach((q,j)=>{const given=answers[String(j)]??answers[j],correct=Number(key[j]),ok=given!==undefined&&Number(given)===correct,opts=q.options||[];html+='<div class="review '+(ok?'ok':'bad')+'"><b>Câu '+(j+1)+'. '+esc(q.text||q.question||'')+'</b><div class="answer '+(ok?'correct':'wrong')+'">'+(ok?'✅ Đúng':'❌ Sai')+'</div><div class="answer">Bạn chọn: <b>'+esc(given===undefined?'Chưa trả lời':letter(given)+'. '+(opts[Number(given)]??''))+'</b></div><div class="answer">Đáp án đúng: <b>'+esc(key[j]===undefined?'Chưa có đáp án':letter(correct)+'. '+(opts[correct]??''))+'</b></div></div>'});html+='</div>';document.getElementById('detail').innerHTML=html;document.getElementById('detail').scrollIntoView({behavior:'smooth'})}</script></body></html>
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lịch sử làm bài - English Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#0f172a;font-family:Inter,system-ui,sans-serif}.top{background:linear-gradient(135deg,#172554,#2563eb,#38bdf8);color:#fff;padding:28px 18px}.wrap{max-width:1050px;margin:auto;padding:20px 16px}.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin:15px 0;box-shadow:0 6px 24px #0f172a0b}.field{margin:12px 0}.field label{display:block;font-weight:700;margin-bottom:6px}.field input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px}.btn{border:0;border-radius:10px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}.btn.gray{background:#e8eef7;color:#0f172a}.muted{color:#64748b;font-size:14px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.item{border:1px solid #e2e8f0;border-radius:15px;padding:17px;margin:12px 0}.score{font-size:26px;font-weight:900;color:#2563eb}.rubric{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.rubric span{padding:7px 10px;border:1px solid #dbeafe;border-radius:9px;background:#eff6ff}.review{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin:10px 0}.ok{border-left:5px solid #16a34a;background:#f0fdf4}.bad{border-left:5px solid #dc2626;background:#fef2f2}.answer{background:#fff;border-radius:8px;padding:8px;margin-top:7px}.correct{color:#15803d;font-weight:800}.wrong{color:#b91c1c;font-weight:800}.notice{padding:13px;border-radius:10px;background:#eff6ff;color:#1e40af}.danger{background:#fef2f2;color:#991b1b}.essay{white-space:pre-wrap;line-height:1.65;background:#f8fafc;padding:14px;border-radius:10px}.hidden{display:none}@media(max-width:600px){.wrap{padding:15px 11px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap"><h1>📊 Lịch sử làm bài</h1><div>🧑‍🎓 Xem lại kết quả các bài đã làm</div></div></header>
+<main class="wrap">
+<div class="card"><div class="row"><div><h2>🔎 Tra cứu lịch sử</h2><p class="muted">Bạn có thể nhập MSSV. Nếu đã đăng nhập tài khoản sinh viên, hệ thống cũng tự lấy các bài Writing của tài khoản đó.</p></div><button class="btn gray" onclick="location.href='./student.html'">📚 Về thư viện đề</button></div><div class="field"><label>MSSV</label><input id="sid" placeholder="Ví dụ: B1234567"></div><button class="btn" onclick="loadHistory()">🔍 Xem lịch sử</button></div>
+<div id="app"></div>
+</main>
+<script>
+const cfg=window.SUPABASE_CONFIG||{};const sb=supabase.createClient(cfg.url,cfg.anonKey);const app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const parseJson=(v,f)=>{if(typeof v!=='string')return v??f;try{return JSON.parse(v)}catch{return f}};
+let listening=[],writing=[],exams={};
+
+async function loadHistory(){
+ const sid=document.getElementById('sid').value.trim();app.innerHTML='<div class="card">⏳ Đang tải lịch sử...</div>';
+ const {data:{session}}=await sb.auth.getSession();
+ let userId=session?.user?.id||null;
+ let studentUserIds=[];
+ if(sid){
+   const sr=await sb.from('submissions').select('student_user_id').eq('student_id',sid);
+   if(!sr.error) studentUserIds=[...new Set((sr.data||[]).map(x=>x.student_user_id).filter(Boolean))];
+ }
+ if(!sid&&!userId){app.innerHTML='<div class="card notice danger">❌ Hãy đăng nhập sinh viên hoặc nhập MSSV.</div>';return}
+ if(userId&&!studentUserIds.includes(userId))studentUserIds.push(userId);
+
+ let lr;
+ if(sid) lr=await sb.from('submissions').select('*').eq('student_id',sid).order('submitted_at',{ascending:false});
+ else lr=await sb.from('submissions').select('*').eq('student_user_id',userId).order('submitted_at',{ascending:false});
+ if(lr.error){app.innerHTML='<div class="card notice danger">❌ '+esc(lr.error.message)+'</div>';return}
+ listening=lr.data||[];
+
+ let wr;
+ if(studentUserIds.length) wr=await sb.from('writing_submissions').select('*').in('student_user_id',studentUserIds).order('created_at',{ascending:false});
+ else wr={data:[],error:null};
+ if(wr.error){app.innerHTML='<div class="card notice danger">❌ Không tải được lịch sử Writing: '+esc(wr.error.message)+'</div>';return}
+ writing=wr.data||[];
+
+ const ids=[...new Set([...listening,...writing].map(x=>x.exam_id).filter(Boolean))];
+ if(ids.length){const er=await sb.from('exams').select('*').in('id',ids);if(!er.error)(er.data||[]).forEach(x=>exams[x.id]=x)}
+ render();
+}
+
+function render(){
+ if(!listening.length&&!writing.length){app.innerHTML='<div class="card notice">📭 Chưa tìm thấy bài làm nào.</div>';return}
+ let html='';
+ if(writing.length){
+  html+='<div class="card"><div class="row"><h2>✍️ Writing</h2><span class="muted">'+writing.length+' lượt làm</span></div>';
+  html+=writing.map((r,i)=>{const e=exams[r.exam_id]||{};const scores=r.rubric_scores||{};const rubric=Object.entries(scores).map(([n,v])=>'<span>'+esc(n)+': <b>'+esc(v)+'</b></span>').join('');return '<div class="item"><div class="row"><div><h3>'+esc(e.title||'Đề Writing')+'</h3><div class="muted">🕐 '+new Date(r.created_at).toLocaleString('vi-VN')+' • '+esc(r.word_count||0)+' từ</div></div><div class="score">'+esc(r.total_score??'—')+'/10</div></div><div class="rubric">'+rubric+'</div><p>'+esc(r.overall_comment||'')+'</p><button class="btn gray" onclick="viewWriting('+i+')">📋 Xem bài Writing</button></div>'}).join('');
+  html+='</div>';
+ }
+ if(listening.length){
+  html+='<div class="card"><div class="row"><h2>🎧 Listening / trắc nghiệm</h2><span class="muted">'+listening.length+' lượt làm</span></div>';
+  html+=listening.map((r,i)=>{const e=exams[r.exam_id]||{};return '<div class="item"><div class="row"><div><h3>'+esc(e.title||'Đề thi')+'</h3><div class="muted">🕐 '+(r.submitted_at?new Date(r.submitted_at).toLocaleString('vi-VN'):'Không rõ thời gian')+'</div></div><div class="score">'+esc(r.score??'—')+'</div></div><p>✅ '+esc(r.correct_count??0)+'/'+esc(r.total_questions??0)+' câu đúng</p><button class="btn gray" onclick="viewListening('+i+')">📋 Xem bài làm</button></div>'}).join('');
+  html+='</div>';
+ }
+ html+='<div id="detail"></div>';app.innerHTML=html;
+}
+
+function viewWriting(i){const r=writing[i],e=exams[r.exam_id]||{},scores=r.rubric_scores||{};let html='<div class="card"><div class="row"><h2>📋 '+esc(e.title||'Bài Writing')+'</h2><button class="btn gray" onclick="closeDetail()">Đóng</button></div><p class="muted">Điểm: <b>'+esc(r.total_score)+'/10</b> • '+esc(r.word_count||0)+' từ • '+new Date(r.created_at).toLocaleString('vi-VN')+'</p><div class="rubric">'+Object.entries(scores).map(([n,v])=>'<span>'+esc(n)+': <b>'+esc(v)+'</b></span>').join('')+'</div><h3>📝 Bài viết</h3><div class="essay">'+esc(r.essay)+'</div><h3>💬 Nhận xét</h3><p>'+esc(r.overall_comment||'')+'</p><h3>💪 Điểm mạnh</h3><ul>'+parseJson(r.strengths,[]).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul><h3>🎯 Cần cải thiện</h3><ul>'+parseJson(r.improvements,[]).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>';document.getElementById('detail').innerHTML=html;document.getElementById('detail').scrollIntoView({behavior:'smooth'});}
+function viewListening(i){const r=listening[i],e=exams[r.exam_id]||{};let answers=parseJson(r.answers,{}),key=parseJson(e.answer_key,[]),qs=parseJson(e.questions,[]);if(!Array.isArray(key))key=Object.values(key||{});if(!Array.isArray(qs)){return}let html='<div class="card"><div class="row"><h2>📋 '+esc(e.title||'Bài làm')+'</h2><button class="btn gray" onclick="closeDetail()">Đóng</button></div><p class="muted">Điểm: '+esc(r.score)+' • Đúng: '+esc(r.correct_count)+'/'+esc(r.total_questions)+'</p>';qs.forEach((q,j)=>{const given=answers[String(j)]??answers[j],correct=Number(key[j]),ok=given!==undefined&&Number(given)===correct,opts=q.options||[];html+='<div class="review '+(ok?'ok':'bad')+'"><b>Câu '+(j+1)+'. '+esc(q.text||q.question||'')+'</b><div class="answer '+(ok?'correct':'wrong')+'">'+(ok?'✅ Đúng':'❌ Sai')+'</div><div class="answer">Bạn chọn: <b>'+esc(given===undefined?'Chưa trả lời':String.fromCharCode(65+Number(given))+'. '+(opts[Number(given)]??''))+'</b></div><div class="answer">Đáp án đúng: <b>'+esc(key[j]===undefined?'Chưa có đáp án':String.fromCharCode(65+correct)+'. '+(opts[correct]??''))+'</b></div></div>'});html+='</div>';document.getElementById('detail').innerHTML=html;document.getElementById('detail').scrollIntoView({behavior:'smooth'});}
+function closeDetail(){const d=document.getElementById('detail');if(d)d.innerHTML='';}
+</script></body></html>
