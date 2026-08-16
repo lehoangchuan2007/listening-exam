@@ -15,14 +15,15 @@
   };
 
   const boot=()=>{
-    load('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=10');
-    load('exam-folder-move-fix','./exam-folder-move-fix.js?v=4');
-    load('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=3');
+    load('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=11');
+    load('exam-folder-move-fix','./exam-folder-move-fix.js?v=5');
+    load('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=4');
   };
 
   // Legacy exam-folders.js can still be present in older cached pages and render
-  // the old UI into #app. If that happens, immediately restore the canonical
-  // Explorer instead of allowing the two renderers to fight over #app.
+  // the old UI into #app. Check only during startup. Do NOT observe every DOM
+  // mutation: Explorer v5 intentionally re-renders #app when navigating folders,
+  // and a global MutationObserver causes needless work and visible lag.
   const repairLegacyOverride=()=>{
     const app=document.getElementById('app');
     if(!app)return;
@@ -39,10 +40,10 @@
 
   const start=()=>{
     boot();
-    const observer=new MutationObserver(()=>setTimeout(repairLegacyOverride,0));
-    observer.observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
-    setTimeout(repairLegacyOverride,400);
-    setTimeout(repairLegacyOverride,1200);
+    // Legacy protection is intentionally limited to startup. The canonical
+    // Explorer is now the sole renderer and navigation must stay uninterrupted.
+    setTimeout(repairLegacyOverride,600);
+    setTimeout(repairLegacyOverride,1500);
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
