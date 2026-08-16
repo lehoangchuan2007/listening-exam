@@ -23,7 +23,8 @@
   async function boot(){
     await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=15');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
-    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=7');
+    // v8 intentionally bumps the UI asset so browsers/CDNs cannot keep the pre-sort version.
+    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=8');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
     await loadScript('exam-folders-context-menu','./exam-folders-context-menu.js?v=1');
 
