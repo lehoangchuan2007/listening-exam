@@ -20,12 +20,20 @@
     if(crumb){crumb.click();setActive(button);return;}
     const card=id?main.querySelector(`[data-folder="${CSS.escape(id)}"]`):null;
     if(card){card.click();setActive(button);return;}
-    // Explorer v5 may not have rendered this folder in the current view yet.
-    // Drive its state directly, then let its renderer redraw the contents.
     if(window.__ENGLISH_STUDIO_EXPLORER_API__?.openFolder){window.__ENGLISH_STUDIO_EXPLORER_API__.openFolder(id);setActive(button);}
   }
-  function setActive(button){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(x=>x.classList.toggle('active',x===button));}
+  function setActive(button){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(x=>x.classList.toggle('active',x===button))}
   function bindTree(){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(b=>{if(b.dataset.bound==='1')return;b.dataset.bound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(b.dataset.winFolder==='root'?'root':b.dataset.winFolder,b)})})}
-  function enhance(){const app=document.getElementById('app');if(!app)return;const root=app.querySelector('.efx5');if(!root)return;if(root.closest('.efwin-shell')){bindTree();return}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home active" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);bindTree()}
-  style();const obs=new MutationObserver(()=>enhance());obs.observe(document.getElementById('app')||document.body,{childList:true});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>loadFolders(),{once:true});else loadFolders();
+  function enhance(){const app=document.getElementById('app');if(!app)return false;const root=app.querySelector('.efx5');if(!root)return false;if(root.closest('.efwin-shell')){bindTree();return true}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home active" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);bindTree();return true}
+  function waitForExplorer(){
+    if(enhance())return;
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      if(enhance()||tries>=40)clearInterval(timer);
+    },250);
+  }
+  style();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{loadFolders();waitForExplorer()},{once:true});
+  else{loadFolders();waitForExplorer()}
 })();
