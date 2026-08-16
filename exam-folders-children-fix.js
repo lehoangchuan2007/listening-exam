@@ -1,5 +1,5 @@
 // English Studio - Canonical File Explorer bootloader.
-// manage.html has ONE folder renderer: Explorer v5 + Windows 2-column shell.
+// manage.html has ONE folder renderer: Explorer v5 + Windows 2-column shell + context menu controller.
 (function(){
   if(!/manage\.html$/.test(location.pathname))return;
   if(window.__ENGLISH_STUDIO_EXPLORER_RESTORE__)return;
@@ -21,10 +21,11 @@
   const waitFor=(test,timeout=6000)=>new Promise(resolve=>{const started=Date.now();const tick=()=>test()||Date.now()-started>=timeout?resolve():setTimeout(tick,50);tick()});
 
   async function boot(){
-    await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=14');
+    await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=15');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
     await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=7');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
+    await loadScript('exam-folders-context-menu','./exam-folders-context-menu.js?v=1');
 
     if(typeof window.render==='function'){
       window.__ENGLISH_STUDIO_LEGACY_RENDER__=window.render;
