@@ -17,26 +17,29 @@
     .filter-btn.active{background:#fff;border-color:#bfdbfe;box-shadow:0 2px 8px rgba(37,99,235,.08)}
     .library-meta{margin-top:13px!important;padding-top:11px;border-top:1px solid #eef2f7}
     #list.grid{gap:12px;margin-top:14px}
-    #list.grid > .exam{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:'icon main action';align-items:center;column-gap:13px;min-height:88px;padding:14px 15px;border-radius:15px;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.035);transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
+    #list.grid > .exam{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:13px;row-gap:2px;min-height:88px;padding:14px 15px;border-radius:15px;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.035);transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
     #list.grid > .exam:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(15,23,42,.07);border-color:#bfdbfe}
-    #list.grid > .exam .badge{grid-area:icon;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:0;flex:none}
+    #list.grid > .exam .badge{grid-column:1;grid-row:1 / span 3;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:0;flex:none}
     #list.grid > .exam .badge.listening:before{content:'🎧';font-size:20px}
     #list.grid > .exam .badge.reading:before{content:'📖';font-size:20px}
     #list.grid > .exam .badge.writing:before{content:'✍️';font-size:20px}
     #list.grid > .exam .badge:not(.listening):not(.reading):not(.writing):before{content:'📝';font-size:20px}
-    #list.grid > .exam > h2{grid-area:main;margin:0 0 4px;font-size:16px;line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #list.grid > .exam > p{grid-area:main;margin:0;color:#64748b;font-size:12.5px;line-height:1.45;min-width:0}
-    #list.grid > .exam > p + p{margin-top:3px;color:#475569}
-    #list.grid > .exam > .btn{grid-area:action;white-space:nowrap;padding:9px 12px;font-size:13px;border-radius:9px}
-    #list.grid > .exam > .badge + h2{align-self:end}
+    #list.grid > .exam > h2{grid-column:2;grid-row:1;margin:0;font-size:16px;line-height:1.35;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:end}
+    #list.grid > .exam > p{grid-column:2;margin:0;color:#64748b;font-size:12.5px;line-height:1.45;min-width:0;overflow-wrap:anywhere}
+    #list.grid > .exam > p:first-of-type{grid-row:2}
+    #list.grid > .exam > p:nth-of-type(2){grid-row:3;color:#475569}
+    #list.grid > .exam > .btn{grid-column:3;grid-row:1 / span 3;white-space:nowrap;padding:9px 12px;font-size:13px;border-radius:9px;align-self:center}
     @media(max-width:700px){
       #app > .card:first-child{padding:18px 15px}
       .filter-row{width:100%;overflow-x:auto;flex-wrap:nowrap}
       .filter-btn{white-space:nowrap}
       #list.grid{grid-template-columns:1fr}
-      #list.grid > .exam{grid-template-columns:38px minmax(0,1fr);grid-template-areas:'icon main' 'icon action';row-gap:7px}
-      #list.grid > .exam > .btn{justify-self:start}
-      #list.grid > .exam > h2{white-space:normal}
+      #list.grid > .exam{grid-template-columns:38px minmax(0,1fr);grid-template-rows:auto auto auto auto;column-gap:11px;row-gap:3px}
+      #list.grid > .exam .badge{grid-column:1;grid-row:1 / span 3}
+      #list.grid > .exam > h2{grid-column:2;grid-row:1;white-space:normal;overflow:visible}
+      #list.grid > .exam > p:first-of-type{grid-column:2;grid-row:2}
+      #list.grid > .exam > p:nth-of-type(2){grid-column:2;grid-row:3}
+      #list.grid > .exam > .btn{grid-column:2;grid-row:4;justify-self:start;margin-top:5px}
     }
   `;
   document.head.appendChild(style);
