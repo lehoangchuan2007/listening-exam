@@ -13,6 +13,8 @@
   `;document.head.appendChild(s)}
   function tree(items,parent=null,depth=0){return items.filter(f=>(f.parent_id||null)===(parent||null)).sort((a,b)=>String(a.name).localeCompare(String(b.name),'vi')).map(f=>`<button data-win-folder="${esc(f.id)}" style="padding-left:${10+depth*16}px">📁 ${esc(f.name)}</button>${tree(items,f.id,depth+1)}`).join('')}
   async function loadFolders(){const ses=await db.auth.getSession();if(!ses.data?.session)return;const r=await db.from('exam_folders').select('id,name,parent_id').order('name');if(!r.error)folders=r.data||[];enhance()}
+  function setActiveByMain(){const main=document.querySelector('.efwin-main');if(!main)return;const crumb=main.querySelector('.efx5crumb button[data-crumb]:last-of-type');const id=crumb?.dataset.crumb||'root';document.querySelectorAll('.efwin-tree button[data-win-folder]').forEach(x=>x.classList.toggle('active',x.dataset.winFolder===id));document.querySelector('.efwin-tree button.home')?.classList.toggle('active',id==='root')}
+  function installStableRenderBridge(){if(window.__ENGLISH_STUDIO_STABLE_RENDER_BRIDGE__)return;const desc=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');if(!desc?.set||!desc?.get)return;window.__ENGLISH_STUDIO_STABLE_RENDER_BRIDGE__=true;Object.defineProperty(Element.prototype,'innerHTML',{configurable:desc.configurable,enumerable:desc.enumerable,get:desc.get,set:function(value){if(this.id==='app'&&this.querySelector('.efwin-shell')&&typeof value==='string'&&value.includes('class="efx5"')){const main=this.querySelector('.efwin-main');if(main){desc.set.call(main,value);setTimeout(setActiveByMain,0);return}}desc.set.call(this,value)}})}
   function navigate(target,button){
     const main=document.querySelector('.efwin-main');if(!main)return;
     const id=target==='root'?null:target;
@@ -22,18 +24,12 @@
     if(card){card.click();setActive(button);return;}
     if(window.__ENGLISH_STUDIO_EXPLORER_API__?.openFolder){window.__ENGLISH_STUDIO_EXPLORER_API__.openFolder(id);setActive(button);}
   }
-  function setActive(button){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(x=>x.classList.toggle('active',x===button))}
+  function setActive(button){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(x=>x.classList.toggle('active',x===button));document.querySelector('.efwin-tree button.home')?.classList.toggle('active',button?.dataset.winFolder==='root')}
   function bindTree(){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(b=>{if(b.dataset.bound==='1')return;b.dataset.bound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(b.dataset.winFolder==='root'?'root':b.dataset.winFolder,b)})})}
-  function enhance(){const app=document.getElementById('app');if(!app)return false;const root=app.querySelector('.efx5');if(!root)return false;if(root.closest('.efwin-shell')){bindTree();return true}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home active" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);bindTree();return true}
-  function waitForExplorer(){
-    if(enhance())return;
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      if(enhance()||tries>=40)clearInterval(timer);
-    },250);
-  }
+  function enhance(){const app=document.getElementById('app');if(!app)return false;const root=app.querySelector('.efx5');if(!root)return false;if(root.closest('.efwin-shell')){bindTree();setActiveByMain();return true}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home active" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);bindTree();setActiveByMain();return true}
+  function waitForExplorer(){if(enhance())return;let tries=0;const timer=setInterval(()=>{tries++;if(enhance()||tries>=40)clearInterval(timer)},250)}
   style();
+  installStableRenderBridge();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{loadFolders();waitForExplorer()},{once:true});
   else{loadFolders();waitForExplorer()}
 })();
