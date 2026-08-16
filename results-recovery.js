@@ -13,7 +13,10 @@
   function questions(){const q=parse(recoveryExam?.questions,[]);return Array.isArray(q)?q:[]}
   function answerAt(a,i){if(Array.isArray(a))return a[i];if(!a||typeof a!=='object')return undefined;for(const k of [String(i),String(i+1),'q'+i,'q'+(i+1),'question'+i,'question'+(i+1)])if(Object.prototype.hasOwnProperty.call(a,k))return a[k];return undefined}
   function rubricRows(r){const rub=list(recoveryExam?.writing_rubric),scores=parse(r?.rubric_scores,{});return rub.map(x=>{const name=String(x?.name||x?.title||'').trim(),key=name.toLowerCase();let value=scores?.[name];if(value==null){if(key.includes('task response'))value=r?.task_response;else if(key.includes('coherence')||key.includes('cohesion'))value=r?.coherence;else if(key.includes('vocabulary'))value=r?.vocabulary;else if(key.includes('grammar'))value=r?.grammar}return{name,max:Number(x?.max??x?.max_score??0),value:value==null?'—':Number(value)}}).filter(x=>x.name)}
-  function feedbackBlock(title,items,empty='Không có dữ liệu.'){const a=list(items);return '<div class="feedback"><b>'+title+'</b>'+(a.length?'<ul>'+a.map(x=>'<li>'+esc(typeof x==='string'?x:(x?.text||x?.error||x?.suggestion||JSON.stringify(x)))+'</li>').join('')+'</ul>':'<div class="muted">'+empty+'</div>')+'</div>'}
+  function feedbackBlock(cls,title,items,renderer,empty='Không có dữ liệu.'){const a=list(items);return '<div class="feedback '+cls+'"><h4>'+title+'</h4>'+(a.length?'<ul>'+a.map(renderer||defaultFeedback).join('')+'</ul>':'<div class="muted">'+empty+'</div>')+'</div>'}
+  function defaultFeedback(x){return '<li>'+esc(typeof x==='string'?x:(x?.text||x?.error||x?.suggestion||JSON.stringify(x)))+'</li>'}
+  function grammarFeedback(x){if(typeof x==='string')return '<li>'+esc(x)+'</li>';return '<li><b>'+esc(x?.original||'')+'</b>'+(x?.correction?' → <span class="correct">'+esc(x.correction)+'</span>':'')+(x?.explanation?'<div class="muted">'+esc(x.explanation)+'</div>':'')+'</li>'}
+  function phraseFeedback(x){if(typeof x==='string')return '<li>'+esc(x)+'</li>';return '<li><b>'+esc(x?.original||'')+'</b>'+(x?.better?' → <span class="correct">'+esc(x.better)+'</span>':'')+'</li>'}
   function renderDetail(r){
     const detail=document.getElementById('detail');if(!detail)return;
     if(recoveryMode==='writing'){
@@ -21,10 +24,14 @@
       const model=r?.ai_model||'AI';
       detail.innerHTML='<div class="card"><div class="row"><h3>👁 Chi tiết bài làm — '+esc(r.student_name||'Sinh viên')+'</h3><button class="btn gray" onclick="document.getElementById(\'detail\').innerHTML=\'\'">Đóng</button></div>'+
         '<div class="row"><div><b>Điểm tổng: '+esc(r.total_score??r.score??0)+'/10</b></div><div class="muted">🤖 Chấm bởi '+esc(model)+'</div></div>'+
-        (rr.length?'<div class="rubric">'+rr.map(x=>'<span><b>'+esc(x.name)+'</b>: '+esc(x.value)+'/'+esc(x.max)+'</span>').join('')+'</div>':'')+
-        '<h4>📝 Bài làm</h4><div class="essay">'+esc(r.essay||r.answer||r.content||'Chưa có bài viết.')+'</div>'+
-        '<h4>🤖 Nhận xét của AI</h4><div class="feedback">'+(overall?'<div>'+esc(overall)+'</div>':'<div class="muted">Chưa có nhận xét tổng quan.</div>')+'</div>'+
-        feedbackBlock('💪 Điểm mạnh',r.strengths)+feedbackBlock('🛠️ Điểm cần cải thiện',r.improvements)+feedbackBlock('🔤 Lỗi ngữ pháp',r.grammar_errors)+feedbackBlock('💡 Cách diễn đạt tốt hơn',r.better_phrases)+
+        (rr.length?'<div class="feedback overall"><h4>🔵 Điểm theo từng tiêu chí</h4><div class="rubric">'+rr.map(x=>'<span><b>'+esc(x.name)+'</b>: '+esc(x.value)+'/'+esc(x.max)+'</span>').join('')+'</div></div>':'')+
+        '<div class="essay"><b>📝 Bài làm</b><br><br>'+esc(r.essay||r.answer||r.content||'Chưa có bài viết.')+'</div>'+
+        '<div class="feedback overall"><h4>🟦 Nhận xét tổng quan của AI</h4>'+(overall?'<div>'+esc(overall)+'</div>':'<div class="muted">Chưa có nhận xét tổng quan.</div>')+'</div>'+
+        feedbackBlock('strengths','🟢 Điểm mạnh',r.strengths)+
+        feedbackBlock('improvements','🟠 Cần cải thiện',r.improvements)+
+        feedbackBlock('grammar','🔴 Lỗi ngữ pháp',r.grammar_errors,grammarFeedback)+
+        feedbackBlock('phrases','🟣 Cách diễn đạt tốt hơn',r.better_phrases,phraseFeedback)+
+        '<div class="muted" style="margin-top:12px">🤖 Model AI: '+esc(model)+'</div>'+
         '</div>';
     }else{
       const qs=questions(),a=parse(r.answers??r.student_answers,{}),html=['<div class="card"><div class="row"><h3>👁 Chi tiết bài làm — '+esc(r.student_name||r.full_name||r.name||'Sinh viên')+'</h3><button class="btn gray" onclick="document.getElementById(\'detail\').innerHTML=\'\'">Đóng</button></div>'];
