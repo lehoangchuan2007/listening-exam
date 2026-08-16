@@ -18,6 +18,7 @@
     const active=document.querySelector('.efwin-tree button.active')?.dataset.winFolder||'root';
     side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home'+(active==='root'?' active':'')+'" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';
     bindTree();
+    setActiveByMain();
   }
   async function loadFolders(){
     const ses=await db.auth.getSession();
@@ -44,7 +45,7 @@
   }
   function setActive(button){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(x=>x.classList.toggle('active',x===button));document.querySelector('.efwin-tree button.home')?.classList.toggle('active',button?.dataset.winFolder==='root')}
   function bindTree(){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(b=>{if(b.dataset.bound==='1')return;b.dataset.bound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(b.dataset.winFolder==='root'?'root':b.dataset.winFolder,b)})})}
-  function enhance(){const app=document.getElementById('app');if(!app)return false;const root=app.querySelector('.efx5');if(!root)return false;if(root.closest('.efwin-shell')){bindTree();setActiveByMain();return true}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';side.innerHTML='<div class="efwin-side-title">📌 Truy cập nhanh</div><div class="efwin-tree"><button class="home active" data-win-folder="root">🏠 Đề thi</button>'+tree(folders)+'</div>';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);bindTree();setActiveByMain();return true}
+  function enhance(){const app=document.getElementById('app');if(!app)return false;const root=app.querySelector('.efx5');if(!root)return false;if(root.closest('.efwin-shell')){renderSide();bindTree();setActiveByMain();return true}const shell=document.createElement('div');shell.className='efwin-shell';const side=document.createElement('aside');side.className='efwin-side';const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);shell.append(side,main);app.appendChild(shell);renderSide();bindTree();setActiveByMain();return true}
   function waitForExplorer(){if(enhance())return;let tries=0;const timer=setInterval(()=>{tries++;if(enhance()||tries>=40)clearInterval(timer)},250)}
   style();
   installStableRenderBridge();
