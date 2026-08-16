@@ -1,5 +1,5 @@
 // English Studio - Canonical File Explorer bootloader.
-// manage.html must have ONE folder renderer: Explorer v5 + Move + Windows 2-column shell.
+// manage.html must have ONE folder renderer: Explorer v5 + Windows 2-column shell.
 (function(){
   if(!/manage\.html$/.test(location.pathname))return;
   if(window.__ENGLISH_STUDIO_EXPLORER_RESTORE__)return;
@@ -29,28 +29,26 @@
   });
 
   async function boot(){
-    // 1) Canonical renderer.
-    await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=12');
+    // Canonical renderer first.
+    await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=13');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
 
-    // 2) Move logic only. It must never render a second folder UI.
-    await loadScript('exam-folder-move-fix','./exam-folder-move-fix.js?v=6');
-
-    // 3) The only visual shell: Windows-style 2 columns + Quick Access.
-    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=5');
+    // The only visual enhancer: Windows-style 2 columns + Quick Access.
+    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=6');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
 
-    // manage.html still contains legacy exam-list helpers. Keep their edit/create
-    // functions available, but stop their old renderer from replacing Explorer.
+    // manage.html contains an older inline exam-list renderer. Keep its
+    // create/edit helpers, but never allow its old load/render pair to replace
+    // the canonical Explorer after boot.
     if(typeof window.render==='function'){
       window.__ENGLISH_STUDIO_LEGACY_RENDER__=window.render;
-      window.render=function(){ return false; };
+      window.render=function(){return false;};
     }
     if(typeof window.load==='function'){
       window.__ENGLISH_STUDIO_LEGACY_LOAD__=window.load;
       window.load=function(){
         const refresh=document.getElementById('fx-refresh');
-        if(refresh){ refresh.click(); return true; }
+        if(refresh){refresh.click();return true;}
         return false;
       };
     }
