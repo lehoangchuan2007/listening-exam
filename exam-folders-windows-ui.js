@@ -36,14 +36,29 @@
   function navigate(id){const api=window.__ENGLISH_STUDIO_EXPLORER_API__;if(!api?.openFolder)return;api.openFolder(id==='root'?null:id)}
   function bindTree(){document.querySelectorAll('.efwin-tree [data-win-folder]').forEach(b=>{if(b.dataset.bound==='1')return;b.dataset.bound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();navigate(b.dataset.winFolder)})})}
 
+  // Reuse the existing Explorer controller's ⋮ menus for native right-clicks.
+  // No second menu/controller is created here.
+  function bindContextMenus(){
+    document.querySelectorAll('.efwin-main .efx5item').forEach(item=>{
+      if(item.dataset.contextBound==='1')return;
+      item.dataset.contextBound='1';
+      item.addEventListener('contextmenu',e=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const more=item.querySelector('[data-fmore],[data-emore]');
+        if(more)more.click();
+      });
+    });
+  }
+
   function enhance(){
     const app=document.getElementById('app');if(!app)return false;
     const root=app.querySelector('.efx5');if(!root)return false;
-    if(root.closest('.efwin-shell')){renderSide();return true}
+    if(root.closest('.efwin-shell')){renderSide();bindContextMenus();return true}
     const shell=document.createElement('div');shell.className='efwin-shell';
     const side=document.createElement('aside');side.className='efwin-side';
     const main=document.createElement('main');main.className='efwin-main';main.appendChild(root);
-    shell.append(side,main);app.appendChild(shell);renderSide();return true
+    shell.append(side,main);app.appendChild(shell);renderSide();bindContextMenus();return true
   }
 
   function install(){
@@ -56,10 +71,11 @@
           enhance();
           renderSide(s);
           setActive(s);
+          bindContextMenus();
         });
       }else{
         // Only a short startup wait; no DOM observer/polling loop.
-        let tries=0;const timer=setInterval(()=>{tries++;const a=window.__ENGLISH_STUDIO_EXPLORER_API__;if(a?.subscribe){clearInterval(timer);a.subscribe(s=>{enhance();renderSide(s);setActive(s)})}else if(tries>=20)clearInterval(timer)},100)
+        let tries=0;const timer=setInterval(()=>{tries++;const a=window.__ENGLISH_STUDIO_EXPLORER_API__;if(a?.subscribe){clearInterval(timer);a.subscribe(s=>{enhance();renderSide(s);setActive(s);bindContextMenus()})}else if(tries>=20)clearInterval(timer)},100)
       }
     };
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()
