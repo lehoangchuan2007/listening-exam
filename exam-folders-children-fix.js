@@ -1,11 +1,11 @@
 // English Studio - Canonical File Explorer bootloader.
-// ONE folder UI on manage.html: Explorer v5 + move logic + Windows-like 2-column shell.
+// manage.html must have ONE folder renderer: Explorer v5 + Move + Windows 2-column shell.
 (function(){
   if(!/manage\.html$/.test(location.pathname))return;
   if(window.__ENGLISH_STUDIO_EXPLORER_RESTORE__)return;
   window.__ENGLISH_STUDIO_EXPLORER_RESTORE__=true;
 
-  const load=(id,src)=>new Promise(resolve=>{
+  const loadScript=(id,src)=>new Promise(resolve=>{
     const existing=document.getElementById(id);
     if(existing){
       if(existing.dataset.loaded==='1') return resolve();
@@ -24,32 +24,36 @@
 
   const waitFor=(test,timeout=6000)=>new Promise(resolve=>{
     const started=Date.now();
-    const tick=()=>{
-      if(test()||Date.now()-started>=timeout)return resolve();
-      setTimeout(tick,50);
-    };
+    const tick=()=>test()||Date.now()-started>=timeout?resolve():setTimeout(tick,50);
     tick();
   });
 
   async function boot(){
-    // Canonical renderer FIRST. The Windows shell must never race it.
-    await load('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=11');
+    // 1) Canonical renderer.
+    await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=12');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
 
-    // Move logic is independent; it must not render another folder UI.
-    await load('exam-folder-move-fix','./exam-folder-move-fix.js?v=5');
+    // 2) Move logic only. It must never render a second folder UI.
+    await loadScript('exam-folder-move-fix','./exam-folder-move-fix.js?v=6');
 
-    // Load the 2-column Windows-like shell only after Explorer is ready.
-    await load('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=4');
+    // 3) The only visual shell: Windows-style 2 columns + Quick Access.
+    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=5');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
 
-    // Deterministic one-time retry if the enhancer failed to attach.
-    const app=document.getElementById('app');
-    if(app && !app.querySelector('.efwin-shell') && app.querySelector('.efx5')){
-      const s=document.getElementById('exam-folders-windows-ui');
-      if(s)s.remove();
-      window.__ENGLISH_STUDIO_WINDOWS_UI__=false;
-      await load('exam-folders-windows-ui-retry','./exam-folders-windows-ui.js?v=4r1');
+    // The original manage.html contains an older inline exam-list renderer.
+    // Keep its create/edit helpers, but prevent its load/render pair from ever
+    // replacing the canonical Explorer after boot.
+    if(typeof window.render==='function'){
+      window.__ENGLISH_STUDIO_LEGACY_RENDER__=window.render;
+      window.render=function(){ return false; };
+    }
+    if(typeof window.load==='function'){
+      window.__ENGLISH_STUDIO_LEGACY_LOAD__=window.load;
+      window.load=function(){
+        const api=window.__ENGLISH_STUDIO_EXPLORER_API__;
+        if(api?.reload)return api.reload();
+        return false;
+      };
     }
   }
 
