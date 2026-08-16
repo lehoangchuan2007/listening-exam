@@ -23,7 +23,7 @@
   async function boot(){
     await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=15');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
-    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=8');
+    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=9');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
     await loadScript('exam-folders-context-menu','./exam-folders-context-menu.js?v=1');
     await loadScript('exam-folders-ui-polish','./exam-folders-ui-polish.js?v=1');
