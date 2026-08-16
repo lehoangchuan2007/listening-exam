@@ -40,9 +40,8 @@
     await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=5');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
 
-    // The original manage.html contains an older inline exam-list renderer.
-    // Keep its create/edit helpers, but prevent its load/render pair from ever
-    // replacing the canonical Explorer after boot.
+    // manage.html still contains legacy exam-list helpers. Keep their edit/create
+    // functions available, but stop their old renderer from replacing Explorer.
     if(typeof window.render==='function'){
       window.__ENGLISH_STUDIO_LEGACY_RENDER__=window.render;
       window.render=function(){ return false; };
@@ -50,8 +49,8 @@
     if(typeof window.load==='function'){
       window.__ENGLISH_STUDIO_LEGACY_LOAD__=window.load;
       window.load=function(){
-        const api=window.__ENGLISH_STUDIO_EXPLORER_API__;
-        if(api?.reload)return api.reload();
+        const refresh=document.getElementById('fx-refresh');
+        if(refresh){ refresh.click(); return true; }
         return false;
       };
     }
