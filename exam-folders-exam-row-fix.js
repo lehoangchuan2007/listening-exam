@@ -1,6 +1,7 @@
 // English Studio - Explorer unified exam-row DOM normalization
 // One structure for Listening / Reading / Writing:
 // checkbox -> icon -> title -> type -> question count -> menu
+// IMPORTANT: no MutationObserver. Explorer state notifications are the single refresh signal.
 (function(){
   if(!/manage\.html$/.test(location.pathname)||window.__ENGLISH_STUDIO_EXAM_ROW_FIX__)return;
   window.__ENGLISH_STUDIO_EXAM_ROW_FIX__=true;
@@ -24,7 +25,8 @@
     return match?`${match[1]} câu`:'0 câu';
   }
   function normalize(){
-    document.querySelectorAll('.efwin-main .efx5item[data-exam]').forEach(row=>{
+    const rows=document.querySelectorAll('.efwin-main .efx5item[data-exam]');
+    rows.forEach(row=>{
       row.classList.add('efx5exam');
       const type=getType(row);
       const icon=row.querySelector('.efx5icon');
@@ -33,27 +35,13 @@
       let meta=row.querySelector('.efx5meta');
       let typeEl=row.querySelector('.efx5type');
       let questions=row.querySelector('.efx5questions');
-
       if(icon){icon.textContent=ICON[type]||'📄';icon.style.cssText='grid-column:2;grid-row:1;padding:0!important;margin:0!important;width:30px;min-width:30px;text-align:center;line-height:1;';}
       if(name){name.style.cssText='grid-column:3;grid-row:1;min-width:0;margin:0!important;padding:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';}
-
-      if(!typeEl){
-        typeEl=document.createElement('div');
-        typeEl.className='efx5type';
-        if(meta)meta.replaceWith(typeEl); else row.appendChild(typeEl);
-      }
+      if(!typeEl){typeEl=document.createElement('div');typeEl.className='efx5type';if(meta)meta.replaceWith(typeEl);else row.appendChild(typeEl);}
       typeEl.textContent=TYPE[type]||type;
       typeEl.style.cssText='grid-column:4;grid-row:1;min-width:0;margin:0;padding:0;font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-
-      if(!questions){
-        questions=document.createElement('div');
-        questions.className='efx5questions';
-        const count=getQuestionCount(row);
-        questions.textContent=count;
-        row.appendChild(questions);
-      }
+      if(!questions){questions=document.createElement('div');questions.className='efx5questions';questions.textContent=getQuestionCount(row);row.appendChild(questions);}
       questions.style.cssText='grid-column:5;grid-row:1;min-width:0;margin:0;padding:0;font-size:12px;color:#64748b;white-space:nowrap;';
-
       const check=row.querySelector('.efx5check');
       if(check)check.style.cssText='grid-column:1;grid-row:1;width:15px;height:15px;margin:0;justify-self:center;';
       if(more)more.style.cssText='grid-column:6;grid-row:1;position:static;justify-self:end;margin:0;';
@@ -64,11 +52,8 @@
   }
   function start(){
     normalize();
-    const app=document.getElementById('app');
-    if(!app)return;
-    const observer=new MutationObserver(normalize);
-    observer.observe(app,{childList:true,subtree:true});
-    setTimeout(()=>observer.disconnect(),4000);
+    const api=window.__ENGLISH_STUDIO_EXPLORER_API__;
+    if(api?.subscribe)api.subscribe(()=>requestAnimationFrame(normalize));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
