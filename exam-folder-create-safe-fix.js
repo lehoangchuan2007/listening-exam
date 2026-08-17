@@ -1,78 +1,70 @@
-/* English Studio - deterministic folder placement for newly created Reading/Listening exams.
-   IMPORTANT: keep the original createExam/saveExam flow untouched.
-   Capture the active Explorer folder + existing exam IDs BEFORE save, then attach
-   folder_id to the actual newly-created row by its new ID.
+/* English Studio - safe folder placement for newly created Reading/Listening exams.
+   IMPORTANT: does not replace createExam/saveExam and never changes the original save flow.
 */
 (function(){
-  if(!/manage\.html$/.test(location.pathname)||window.__ENGLISH_STUDIO_SAFE_FOLDER_FIX_V2__)return;
-  window.__ENGLISH_STUDIO_SAFE_FOLDER_FIX_V2__=true;
+  if(!/manage\\.html$/.test(location.pathname)||window.__ENGLISH_STUDIO_SAFE_FOLDER_FIX_V3__)return;
+  window.__ENGLISH_STUDIO_SAFE_FOLDER_FIX_V3__=true;
   const cfg=window.SUPABASE_CONFIG||{};
   if(!cfg.url||!cfg.anonKey||!window.supabase?.createClient)return;
   const db=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  let pending=null;
 
-  function explorerState(){
-    try{
-      const candidates=[window.__ENGLISH_STUDIO_EXPLORER_API__,window.__ENGLISH_STUDIO_EXPLORER_V5_API__,window.examExplorer,window.ExamExplorer];
-      for(const api of candidates){
-        if(api&&typeof api.getState==='function'){
-          const s=api.getState();
-          if(s)return s;
-        }
-      }
-    }catch(e){console.warn('Explorer state read failed:',e)}
-    return null;
-  }
   function activeFolderId(){
-    const s=explorerState();
-    if(s&&s.ready!==false)return s.active?String(s.active):null;
-    const last=[...document.querySelectorAll('.efx5crumb [data-crumb]')].at(-1);
+    // Explorer v5 renders the current folder in the last breadcrumb button.
+    const crumbs=[...document.querySelectorAll('.efx5crumb [data-crumb]')];
+    const last=crumbs.at(-1);
     const id=last?.dataset?.crumb;
     return id&&id!=='root'?String(id):null;
   }
-  async function uid(){const r=await db.auth.getSession();return r.data?.session?.user?.id||null}
-  async function snapshot(ownerId,type){
-    const r=await db.from('exams').select('id').eq('owner_id',ownerId).eq('exam_type',type);
-    if(r.error)throw r.error;
+
+  async function snapshotExamIds(uid,type){
+    const r=await db.from('exams').select('id').eq('owner_id',uid).eq('exam_type',type);
+    if(r.error)return new Set();
     return new Set((r.data||[]).map(x=>String(x.id)));
   }
-  async function findNew(ownerId,type,before,timeout=10000){
-    const started=Date.now();
-    while(Date.now()-started<timeout){
-      const r=await db.from('exams').select('id,folder_id,title,exam_type,created_at').eq('owner_id',ownerId).eq('exam_type',type).order('created_at',{ascending:false}).limit(50);
-      if(r.error)throw r.error;
-      const fresh=(r.data||[]).find(x=>!before.has(String(x.id)));
-      if(fresh)return fresh;
+
+  function captureCreateContext(){
+    const type=(document.getElementById('ct')?.value||'listening').toLowerCase();
+    const title=document.getElementById('ctitle')?.value?.trim()||'';
+    if(!['reading','listening'].includes(type)||!title)return null;
+    const folderId=activeFolderId();
+    if(!folderId)return null;
+    return {folderId,type,title};
+  }
+
+  async function placeNewExam(ctx,beforeIds,uid){
+    if(!ctx||!ctx.folderId||!uid)return;
+    const deadline=Date.now()+10000;
+    let candidate=null;
+    while(Date.now()<deadline){
+      const r=await db.from('exams').select('id,folder_id,title,exam_type,created_at').eq('owner_id',uid).eq('exam_type',ctx.type).order('created_at',{ascending:false}).limit(30);
+      if(!r.error){
+        candidate=(r.data||[]).find(x=>!beforeIds.has(String(x.id))&&String(x.title||'').trim()===ctx.title&&(!x.folder_id||String(x.folder_id)!==String(ctx.folderId)));
+        if(candidate)break;
+      }
       await new Promise(resolve=>setTimeout(resolve,350));
     }
-    return null;
+    if(!candidate)return;
+    const up=await db.from('exams').update({folder_id:ctx.folderId}).eq('id',candidate.id).eq('owner_id',uid).select('id').maybeSingle();
+    if(up.error){console.warn('Folder placement failed:',up.error.message);return;}
+    document.getElementById('fx-refresh')?.click();
   }
-  async function place(ctx){
-    try{
-      const ownerId=await uid();
-      if(!ownerId)return;
-      const fresh=await findNew(ownerId,ctx.type,ctx.beforeIds);
-      if(!fresh){console.warn('New exam not detected; folder placement skipped.');return}
-      const r=await db.from('exams').update({folder_id:ctx.folderId}).eq('id',fresh.id).eq('owner_id',ownerId).select('id,folder_id').maybeSingle();
-      if(r.error){console.warn('Folder placement failed:',r.error.message);return}
-      if(!r.data){console.warn('Folder placement returned no row.');return}
-      document.getElementById('fx-refresh')?.click();
-    }catch(err){console.warn('Deterministic folder placement skipped:',err)}
-  }
+
   document.addEventListener('click',async function(ev){
-    const btn=ev.target.closest('.modal .actions .btn');
+    const btn=ev.target.closest('button,.btn');
     if(!btn)return;
-    const text=(btn.textContent||'').trim();
-    if(!/^(💾\s*)?(Tạo đề|Lưu thay đổi)$/.test(text))return;
-    const type=(document.getElementById('ct')?.value||'').toLowerCase();
-    if(!['reading','listening'].includes(type))return;
-    const heading=document.querySelector('.modal h2')?.textContent||'';
-    if(/Chỉnh sửa/.test(heading))return;
-    const folderId=activeFolderId();
-    if(!folderId)return;
-    const ownerId=await uid();
-    if(!ownerId)return;
-    let beforeIds;
-    try{beforeIds=await snapshot(ownerId,type)}catch(err){console.warn('Could not snapshot exam IDs:',err);return}
-    setTimeout(()=>place({folderId,type,beforeIds}),120);
+    const text=(btn.textContent||'').replace(/\\s+/g,' ').trim();
+    if(!/^(?:💾\\s*)?Tạo đề(?: mới)?$/.test(text))return;
+    const ctx=captureCreateContext();
+    if(!ctx)return;
+    const heading=document.querySelector('.modal h2,.modal h3,.efx5modal h2,.efx5modal h3')?.textContent||'';
+    if(/Chỉnh sửa|Sửa đề/i.test(heading))return;
+    const uidResult=await db.auth.getSession();
+    const uid=uidResult.data?.session?.user?.id;
+    if(!uid)return;
+    const beforeIds=await snapshotExamIds(uid,ctx.type);
+    // Save is handled by the original creation flow. Wait until its INSERT is visible,
+    // then identify the actual newly-created row by its new UUID, not by created_at.
+    setTimeout(()=>placeNewExam(ctx,beforeIds,uid),150);
   },true);
 })();
