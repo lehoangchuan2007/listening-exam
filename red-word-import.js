@@ -247,6 +247,14 @@
     if (!button || button.dataset.wordImporterBound === '1') return;
     button.dataset.wordImporterBound = '1'; button.removeAttribute('onclick');
     button.addEventListener('click', event => { event.preventDefault(); event.stopImmediatePropagation(); importListeningWord(); }, true);
+    const wordInput = $('word');
+    if (wordInput && wordInput.dataset.wordFileStatusBound !== '1') {
+      wordInput.dataset.wordFileStatusBound = '1';
+      wordInput.addEventListener('change', () => {
+        const file = wordInput.files?.[0];
+        setStatus('wordStatus', file ? '📄 ' + escapeHtml(file.name) : 'Chưa chọn file');
+      });
+    }
   }
 
   window.redWordImportHandler = importListeningWord;
