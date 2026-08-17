@@ -10,7 +10,7 @@
   async function boot(){
     await loadScript('exam-folders-explorer-v5','./exam-folders-explorer-v5.js?v=16');
     await waitFor(()=>!!document.querySelector('#app .efx5'),6000);
-    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=12');
+    await loadScript('exam-folders-windows-ui','./exam-folders-windows-ui.js?v=13');
     await waitFor(()=>!!document.querySelector('#app .efwin-shell'),5000);
     await loadScript('exam-folders-context-menu','./exam-folders-context-menu.js?v=1');
     if(typeof window.render==='function'){window.__ENGLISH_STUDIO_LEGACY_RENDER__=window.render;window.render=function(){return false}}
