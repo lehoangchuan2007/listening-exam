@@ -25,7 +25,12 @@ audio{width:100%;margin-top:12px}
 <header class="top"><div class="wrap"><h1>🗣️ English Studio — Speaking</h1><div>VSTEP Speaking • Mô phỏng thi tự động</div></div></header>
 <main class="wrap"><div id="app"><div class="card">⏳ Đang tải đề Speaking...</div></div></main>
 <script>
-const cfg=window.SUPABASE_CONFIG||{},sb=supabase.createClient(cfg.url,cfg.anonKey),app=document.getElementById('app');
+const app=document.getElementById('app');
+window.addEventListener('error',e=>{console.error(e.error||e.message);if(app&&!window.__speakingReady){app.innerHTML='<div class="card error"><h2>❌ Lỗi khởi động Speaking</h2><p>'+esc(e.message||'Có lỗi JavaScript xảy ra.')+'</p><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>'}});
+window.addEventListener('unhandledrejection',e=>{console.error(e.reason);if(app&&!window.__speakingReady){app.innerHTML='<div class="card error"><h2>❌ Lỗi kết nối Speaking</h2><p>'+esc(e.reason?.message||e.reason||'Promise bị lỗi.')+'</p><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>'}});
+const cfg=window.SUPABASE_CONFIG||{};
+if(!window.supabase){app.innerHTML='<div class="card error"><h2>❌ Không tải được thư viện Supabase</h2><p>Trình duyệt chưa tải thư viện kết nối. Hãy tải lại trang.</p><button class="btn gray" onclick="location.reload()">↻ Tải lại</button></div>';throw new Error('Supabase JS unavailable');}
+const sb=window.supabase.createClient(cfg.url,cfg.anonKey);
 let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null,examStarted=false,transitionTimer=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const id=()=>new URLSearchParams(location.search).get('exam');
@@ -54,7 +59,7 @@ async function load(){
     }
     parts=normalizeParts(exam);
     if(!parts.length){app.innerHTML='<div class="card error"><h2>⚠️ Đề chưa có câu hỏi</h2><p>Giáo viên cần cấu hình các Part và câu hỏi Speaking trước.</p></div>';return}
-    render();
+    render();window.__speakingReady=true;
   }catch(e){
     console.error('Speaking load error:',e);
     app.innerHTML='<div class="card error"><h2>❌ Không tải được đề Speaking</h2><p>'+esc(e?.message||e)+'</p><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>';
