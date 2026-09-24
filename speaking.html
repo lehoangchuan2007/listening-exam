@@ -23,7 +23,7 @@ audio{width:100%;margin-top:12px}
 </head>
 <body>
 <header class="top"><div class="wrap"><h1>🗣️ English Studio — Speaking</h1><div>VSTEP Speaking • Mô phỏng thi tự động</div></div></header>
-<main class="wrap"><div id="app"><div class="card">⏳ Đang tải đề Speaking...</div></div><button id="submitHidden" style="display:none" aria-hidden="true"></button></main>
+<main class="wrap"><div id="app"><div class="card">⏳ Đang tải đề Speaking...</div></div></main>
 <script>
 const cfg=window.SUPABASE_CONFIG||{},sb=supabase.createClient(cfg.url,cfg.anonKey),app=document.getElementById('app');
 let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null,examStarted=false,transitionTimer=null;
@@ -50,9 +50,29 @@ function render(){
 }
 function setStatus(text){const el=document.getElementById('status-'+partIndex);if(el)el.textContent=text}
 function setClock(sec){const el=document.getElementById('clock-'+partIndex);if(!el)return;const m=Math.floor(sec/60),s=String(sec%60).padStart(2,'0');el.textContent=m+':'+s}
-async function toggleRecord(){if(recording){stopRecording();return}await startRecording()}
-async function startRecording(){
+function setPhase(text){const el=document.getElementById('phase-'+partIndex);if(el)el.textContent=text}
+function clearTimers(){clearInterval(responseTimer);clearInterval(prepTimer);clearTimeout(transitionTimer);responseTimer=null;prepTimer=null;transitionTimer=null}
+async function startExam(){
+  if(examStarted)return;
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('❌ Trình duyệt này chưa hỗ trợ ghi âm. Hãy dùng Chrome hoặc Edge mới.');return}
+  try{
+    const testStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    testStream.getTracks().forEach(t=>t.stop());
+    examStarted=true;
+    document.getElementById('intro').style.display='none';
+    document.getElementById('parts').style.display='block';
+    runCurrentPart();
+  }catch(e){alert('❌ Không thể truy cập microphone. Hãy cấp quyền microphone cho trình duyệt rồi thử lại.')}
+}
+function runCurrentPart(){
+  clearTimers();setClock(0);setStatus('⏳ Đang chuẩn bị...');setPhase('Thời gian chuẩn bị đang chạy.');document.getElementById('wave-'+partIndex).style.visibility='hidden';
+  const prep=Math.max(0,Number(parts[partIndex].prep||0));
+  if(prep>0){
+    let left=prep;setClock(left);
+    prepTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(prepTimer);prepTimer=null;beginAutomaticRecording()}},1000);
+  }else beginAutomaticRecording();
+}
+async function beginAutomaticRecording(){
   try{
     stream=await navigator.mediaDevices.getUserMedia({audio:true});
     chunks=[];const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg'].find(x=>MediaRecorder.isTypeSupported(x))||'';
@@ -60,34 +80,29 @@ async function startRecording(){
     mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
     mediaRecorder.onstop=finishRecording;
     mediaRecorder.start(250);recording=true;
-    document.getElementById('record-'+partIndex).textContent='⏹️ Dừng ghi âm';
-    document.getElementById('record-'+partIndex).classList.add('red');
-    document.getElementById('wave-'+partIndex).style.visibility='visible';setStatus('🔴 Đang ghi âm...');
-    let sec=0;clearInterval(responseTimer);responseTimer=setInterval(()=>{sec++;setClock(sec);const max=Number(parts[partIndex].response||0);if(max&&sec>=max)stopRecording()},1000);
-  }catch(e){alert('❌ Không thể truy cập microphone. Hãy cấp quyền microphone cho trình duyệt rồi thử lại.')}
+    setStatus('🔴 Đang ghi âm...');setPhase('Bạn đang trả lời. Hệ thống đang tự động ghi âm.');document.getElementById('wave-'+partIndex).style.visibility='visible';
+    let left=Math.max(1,Number(parts[partIndex].response||60));setClock(left);
+    responseTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(responseTimer);responseTimer=null;stopAutomaticRecording()}},1000);
+  }catch(e){console.error(e);setStatus('❌ Không thể ghi âm');setPhase('Không thể truy cập microphone.');alert('❌ Không thể bắt đầu ghi âm. Hãy kiểm tra quyền microphone rồi tải lại trang.')}
 }
-function stopRecording(){if(!mediaRecorder||mediaRecorder.state==='inactive')return;clearInterval(responseTimer);mediaRecorder.stop();recording=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;setStatus('⏳ Đang xử lý bản ghi...')}
+function stopAutomaticRecording(){
+  if(!mediaRecorder||mediaRecorder.state==='inactive')return;
+  mediaRecorder.stop();recording=false;
+  if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+}
 function finishRecording(){
-  const blob=new Blob(chunks,{type:mediaRecorder?.mimeType||'audio/webm'}),url=URL.createObjectURL(blob);partAudio[partIndex]={blob,url,type:blob.type};
-  const audio=document.getElementById('audio-'+partIndex);audio.src=url;audio.style.display='block';
-  document.getElementById('record-'+partIndex).disabled=true;document.getElementById('record-'+partIndex).textContent='✅ Đã ghi âm';
-  document.getElementById('next-'+partIndex).disabled=false;document.getElementById('wave-'+partIndex).style.visibility='hidden';setStatus('✅ Bản ghi đã sẵn sàng');
-}
-async function nextPart(){
-  if(!partAudio[partIndex])return;
-  if(partIndex===parts.length-1){await submitAll();return}
-  document.getElementById('part-'+partIndex).classList.remove('active');
-  partIndex++;
-  document.getElementById('part-'+partIndex).classList.add('active');
-  document.getElementById('step-'+partIndex).className='step active';
-  window.scrollTo({top:0,behavior:'smooth'});
-  runCurrentPart();
+  const blob=new Blob(chunks,{type:mediaRecorder?.mimeType||'audio/webm'});
+  partAudio[partIndex]={blob,type:blob.type};
+  document.getElementById('wave-'+partIndex).style.visibility='hidden';
+  setStatus('✅ Đã hoàn thành phần thi');setPhase('Bản ghi đã được lưu tạm. Đang chuyển sang phần tiếp theo...');
+  const step=document.getElementById('step-'+partIndex);if(step)step.className='step done';
+  transitionTimer=setTimeout(()=>nextPart(),1200);
 }
 async function submitAll(){
   const missing=parts.findIndex((_,i)=>!partAudio[i]);if(missing>=0){alert('Bạn chưa ghi âm Part '+(missing+1)+'.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){alert('🔐 Phiên đăng nhập đã hết.');return}
   const meta=session.user?.user_metadata||{},name=meta.full_name||meta.name||'';
-  const submitBtn=document.getElementById('next-'+partIndex);submitBtn.disabled=true;submitBtn.textContent='⏳ Đang tải audio...';
+  setPhase('⏳ Đang nộp bài và tải bản ghi...');
   const paths={};
   try{
     for(let i=0;i<partAudio.length;i++){
@@ -99,7 +114,7 @@ async function submitAll(){
     const row={exam_id:exam.id,student_user_id:session.user.id,student_name:name,audio_paths:paths,status:'submitted'};
     const ins=await sb.from('speaking_submissions').insert(row).select('id').single();if(ins.error)throw ins.error;
     app.innerHTML='<div class="card" style="text-align:center"><div style="font-size:48px">🎉</div><h1>Đã nộp bài Speaking!</h1><p class="muted">Các bản ghi âm đã được lưu thành công.</p><div class="notice">🤖 Bước AI chấm điểm sẽ được kết nối ở giai đoạn tiếp theo.</div><button class="btn gray" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>';
-  }catch(e){console.error(e);alert('❌ Không thể nộp bài: '+(e.message||e));submitBtn.disabled=false;submitBtn.textContent='📤 Nộp bài'}
+  }catch(e){console.error(e);alert('❌ Không thể nộp bài: '+(e.message||e));setPhase('❌ Nộp bài thất bại.')}
 }
 window.startExam=startExam;window.nextPart=nextPart;window.submitAll=submitAll;load();
 </script>
