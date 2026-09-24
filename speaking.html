@@ -14,10 +14,10 @@
 .part{display:none}.part.active{display:block}.part-badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-weight:800;font-size:13px}
 .prompt{font-size:20px;line-height:1.7;margin:18px 0;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;white-space:pre-wrap}
 .options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.option{border:1px solid #cbd5e1;border-radius:12px;padding:14px;background:#fff}.option b{display:block;margin-bottom:4px}
-.record-box{text-align:center;padding:22px;border:2px dashed #cbd5e1;border-radius:16px;background:#f8fafc}.timer{font-size:34px;font-weight:900;color:#2563eb;margin:8px 0}.status{font-weight:800;margin:10px 0}.wave{height:55px;display:flex;justify-content:center;align-items:center;gap:4px;margin:12px}.wave i{display:block;width:5px;height:14px;border-radius:8px;background:#2563eb;animation:pulse .8s ease-in-out infinite}.wave i:nth-child(2n){animation-delay:.12s}.wave i:nth-child(3n){animation-delay:.24s}@keyframes pulse{0%,100%{height:12px}50%{height:42px}}
+.record-box{text-align:center;padding:22px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 18px #0f172a08}.timer{font-size:34px;font-weight:900;color:#2563eb;margin:8px 0}.status{font-weight:800;margin:10px 0}
+.wave{height:48px;display:flex;justify-content:center;align-items:center;gap:3px;margin:12px auto;max-width:300px;opacity:.9}.wave i{display:block;width:4px;height:7px;border-radius:999px;background:#60a5fa;transform-origin:center;animation:voice 1.05s ease-in-out infinite}.wave i:nth-child(2n){animation-delay:-.32s}.wave i:nth-child(3n){animation-delay:-.58s}.wave i:nth-child(4n){animation-delay:-.78s}.wave i:nth-child(5n){animation-delay:-.45s}@keyframes voice{0%,100%{height:7px;opacity:.35}25%{height:17px;opacity:.7}50%{height:34px;opacity:1}75%{height:13px;opacity:.55}}
 .steps{display:flex;gap:7px;flex-wrap:wrap}.step{padding:7px 10px;border-radius:999px;background:#eef2f7;color:#64748b;font-weight:800;font-size:13px}.step.active{background:#dbeafe;color:#1d4ed8}.step.done{background:#dcfce7;color:#166534}
 .notice{padding:14px;border-radius:12px;background:#eff6ff;color:#1e40af;margin:12px 0}.error{background:#fef2f2;color:#991b1b}
-audio{width:100%;margin-top:12px}
 @media(max-width:650px){.options{grid-template-columns:1fr}.prompt{font-size:17px}.timer{font-size:28px}}
 </style>
 </head>
@@ -38,116 +38,60 @@ function unwrap(v){if(Array.isArray(v))return v[0]||null;if(v?.data&&Array.isArr
 function parse(v){if(Array.isArray(v))return v;if(typeof v==='string'){try{return JSON.parse(v)}catch{return []}}return []}
 function normalizeParts(e){const q=parse(e?.questions);if(q.length)return q.map((x,i)=>({part:x.part||x.section||String(i+1),title:x.title||'',prompt:x.prompt||x.text||x.question||'',options:Array.isArray(x.options)?x.options:[],prep:Number((x.preparation_seconds??x.prep_seconds??x.preparation)??0),response:Number((x.response_seconds??x.answer_seconds??x.duration_seconds??x.response)??60)}));return []}
 async function load(){
-  try{
-    if(!window.supabase){throw new Error('Thư viện Supabase chưa tải xong.')}
-    if(!cfg.url||!cfg.anonKey){throw new Error('Thiếu cấu hình Supabase.')}
-    if(!id()){app.innerHTML='<div class="card error"><h2>❌ Thiếu mã đề</h2><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>';return}
-    const sessionResult=await Promise.race([
-      sb.auth.getSession(),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Kết nối đăng nhập bị quá thời gian.')),15000))
-    ]);
-    const session=sessionResult?.data?.session;
-    if(!session){app.innerHTML='<div class="card"><h2>🔐 Cần đăng nhập</h2><p class="muted">Vui lòng đăng nhập tài khoản sinh viên trước khi làm Speaking.</p><button class="btn" onclick="location.href=\'./student.html\'">🔐 Đăng nhập</button></div>';return}
-    const r=await Promise.race([
-      sb.rpc('get_exam_for_student',{p_exam_id:id()}),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Máy chủ không phản hồi khi tải đề.')),15000))
-    ]);
-    if(r.error)throw new Error(r.error.message||'Không thể tải đề.');
-    exam=unwrap(r.data);
-    if(!exam?.id||String(exam.exam_type||'').toLowerCase()!=='speaking'){
-      throw new Error('Đề không tồn tại, chưa được mở hoặc chưa được cấu hình là Speaking.');
-    }
-    parts=normalizeParts(exam);
-    if(!parts.length){app.innerHTML='<div class="card error"><h2>⚠️ Đề chưa có câu hỏi</h2><p>Giáo viên cần cấu hình các Part và câu hỏi Speaking trước.</p></div>';return}
-    render();window.__speakingReady=true;
-  }catch(e){
-    console.error('Speaking load error:',e);
-    app.innerHTML='<div class="card error"><h2>❌ Không tải được đề Speaking</h2><p>'+esc(e?.message||e)+'</p><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>';
-  }
+try{
+if(!window.supabase)throw new Error('Thư viện Supabase chưa tải xong.');if(!cfg.url||!cfg.anonKey)throw new Error('Thiếu cấu hình Supabase.');
+if(!id()){app.innerHTML='<div class="card error"><h2>❌ Thiếu mã đề</h2><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>';return}
+const sessionResult=await Promise.race([sb.auth.getSession(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Kết nối đăng nhập bị quá thời gian.')),15000))]);
+const session=sessionResult?.data?.session;if(!session){app.innerHTML='<div class="card"><h2>🔐 Cần đăng nhập</h2><p class="muted">Vui lòng đăng nhập tài khoản sinh viên trước khi làm Speaking.</p><button class="btn" onclick="location.href=\'./student.html\'">🔐 Đăng nhập</button></div>';return}
+const r=await Promise.race([sb.rpc('get_exam_for_student',{p_exam_id:id()}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Máy chủ không phản hồi khi tải đề.')),15000))]);
+if(r.error)throw new Error(r.error.message||'Không thể tải đề.');exam=unwrap(r.data);
+if(!exam?.id||String(exam.exam_type||'').toLowerCase()!=='speaking')throw new Error('Đề không tồn tại, chưa được mở hoặc chưa được cấu hình là Speaking.');
+parts=normalizeParts(exam);if(!parts.length){app.innerHTML='<div class="card error"><h2>⚠️ Đề chưa có câu hỏi</h2><p>Giáo viên cần cấu hình các Part và câu hỏi Speaking trước.</p></div>';return}
+render();window.__speakingReady=true;
+}catch(e){console.error('Speaking load error:',e);app.innerHTML='<div class="card error"><h2>❌ Không tải được đề Speaking</h2><p>'+esc(e?.message||e)+'</p><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện</button></div>'}
 }
 function render(){
-  app.innerHTML='<div class="row"><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện đề</button><div class="muted">🗣️ '+esc(exam.title)+'</div></div>'+
-  '<div class="card"><div class="row"><div><h2>'+esc(exam.title)+'</h2><p class="muted">'+esc(exam.description||'VSTEP Speaking')+'</p></div><span class="part-badge">🎙️ Tự động ghi âm</span></div><div class="steps">'+parts.map((p,i)=>'<span class="step '+(i===0?'active':'')+'" id="step-'+i+'">Part '+esc(p.part||i+1)+'</span>').join('')+'</div></div>'+
-  '<div class="card notice" id="intro"><h3>📌 Hướng dẫn</h3><p>Thí sinh không cần bấm nút ghi âm. Khi bắt đầu mỗi phần, hệ thống sẽ tự động chạy thời gian chuẩn bị và tự động ghi âm khi đến thời gian trả lời.</p><p>Hết thời gian trả lời, hệ thống tự dừng ghi âm và chuyển sang phần tiếp theo.</p><button class="btn" id="startExamBtn" onclick="startExam()">▶️ Bắt đầu thi</button></div>'+
-  '<div id="parts" style="display:none">'+parts.map((p,i)=>'<section class="part '+(i===0?'active':'')+'" id="part-'+i+'"><span class="part-badge">Part '+esc(p.part||i+1)+'</span><h2>'+esc(p.title||'Speaking')+'</h2><div class="prompt">'+esc(p.prompt)+'</div>'+(p.options.length?'<div class="options">'+p.options.map((o,j)=>'<div class="option"><b>Option '+(j+1)+'</b>'+esc(o)+'</div>').join('')+'</div>':'')+'<div class="record-box"><div class="status" id="status-'+i+'">Chờ bắt đầu</div><div class="timer" id="clock-'+i+'">00:00</div><div class="wave" id="wave-'+i+'" style="visibility:hidden">'+Array.from({length:12},()=>'<i></i>').join('')+'</div><div class="notice" id="phase-'+i+'">Hệ thống sẽ tự động bắt đầu.</div></div></section>').join('')+'</div>';
+app.innerHTML='<div class="row"><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện đề</button><div class="muted">🗣️ '+esc(exam.title)+'</div></div>'+
+'<div class="card"><div class="row"><div><h2>'+esc(exam.title)+'</h2><p class="muted">'+esc(exam.description||'VSTEP Speaking')+'</p></div></div><div class="steps">'+parts.map((p,i)=>'<span class="step '+(i===0?'active':'')+'" id="step-'+i+'">Part '+esc(p.part||i+1)+'</span>').join('')+'</div></div>'+
+'<div class="card notice" id="intro"><h3>📌 Hướng dẫn</h3><p>Thí sinh không cần bấm nút ghi âm. Khi bắt đầu mỗi phần, hệ thống sẽ tự động chạy thời gian chuẩn bị và tự động ghi âm khi đến thời gian trả lời.</p><p>Hết thời gian trả lời, hệ thống tự dừng ghi âm và chuyển sang phần tiếp theo.</p><button class="btn" id="startExamBtn" onclick="startExam()">▶️ Bắt đầu thi</button></div>'+
+'<div id="parts" style="display:none">'+parts.map((p,i)=>'<section class="part '+(i===0?'active':'')+'" id="part-'+i+'"><span class="part-badge">Part '+esc(p.part||i+1)+'</span><h2>'+esc(p.title||'Speaking')+'</h2><div class="prompt">'+esc(p.prompt)+'</div>'+(p.options.length?'<div class="options">'+p.options.map((o,j)=>'<div class="option"><b>Option '+(j+1)+'</b>'+esc(o)+'</div>').join('')+'</div>':'')+'<div class="record-box"><div class="status" id="status-'+i+'">Chờ bắt đầu</div><div class="timer" id="clock-'+i+'">00:00</div><div class="wave" id="wave-'+i+'" style="visibility:hidden">'+Array.from({length:18},()=>'<i></i>').join('')+'</div><div class="notice" id="phase-'+i+'">Hệ thống sẽ tự động bắt đầu.</div></div></section>').join('')+'</div>';
 }
 function setStatus(text){const el=document.getElementById('status-'+partIndex);if(el)el.textContent=text}
 function setClock(sec){const el=document.getElementById('clock-'+partIndex);if(!el)return;const m=Math.floor(sec/60),s=String(sec%60).padStart(2,'0');el.textContent=m+':'+s}
 function setPhase(text){const el=document.getElementById('phase-'+partIndex);if(el)el.textContent=text}
 function clearTimers(){clearInterval(responseTimer);clearInterval(prepTimer);clearTimeout(transitionTimer);responseTimer=null;prepTimer=null;transitionTimer=null}
 async function startExam(){
-  if(examStarted)return;
-  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('❌ Trình duyệt này chưa hỗ trợ ghi âm. Hãy dùng Chrome hoặc Edge mới.');return}
-  try{
-    const testStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    testStream.getTracks().forEach(t=>t.stop());
-    examStarted=true;
-    document.getElementById('intro').style.display='none';
-    document.getElementById('parts').style.display='block';
-    runCurrentPart();
-  }catch(e){alert('❌ Không thể truy cập microphone. Hãy cấp quyền microphone cho trình duyệt rồi thử lại.')}
+if(examStarted)return;if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('❌ Trình duyệt này chưa hỗ trợ ghi âm. Hãy dùng Chrome hoặc Edge mới.');return}
+try{const testStream=await navigator.mediaDevices.getUserMedia({audio:true});testStream.getTracks().forEach(t=>t.stop());examStarted=true;document.getElementById('intro').style.display='none';document.getElementById('parts').style.display='block';runCurrentPart()}catch(e){alert('❌ Không thể truy cập microphone. Hãy cấp quyền microphone cho trình duyệt rồi thử lại.')}
 }
 function runCurrentPart(){
-  clearTimers();setClock(0);setStatus('⏳ Đang chuẩn bị...');setPhase('Thời gian chuẩn bị đang chạy.');document.getElementById('wave-'+partIndex).style.visibility='hidden';
-  const prep=Math.max(0,Number(parts[partIndex].prep||0));
-  if(prep>0){
-    let left=prep;setClock(left);
-    prepTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(prepTimer);prepTimer=null;beginAutomaticRecording()}},1000);
-  }else beginAutomaticRecording();
+clearTimers();setClock(0);setStatus('⏳ Đang chuẩn bị...');setPhase('Thời gian chuẩn bị đang chạy.');document.getElementById('wave-'+partIndex).style.visibility='hidden';
+const prep=Math.max(0,Number(parts[partIndex].prep||0));if(prep>0){let left=prep;setClock(left);prepTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(prepTimer);prepTimer=null;beginAutomaticRecording()}},1000)}else beginAutomaticRecording();
 }
 async function beginAutomaticRecording(){
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    chunks=[];const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg'].find(x=>MediaRecorder.isTypeSupported(x))||'';
-    mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-    mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-    mediaRecorder.onstop=finishRecording;
-    mediaRecorder.start(250);recording=true;
-    setStatus('🔴 Đang ghi âm...');setPhase('Bạn đang trả lời. Hệ thống đang tự động ghi âm.');document.getElementById('wave-'+partIndex).style.visibility='visible';
-    let left=Math.max(1,Number(parts[partIndex].response||60));setClock(left);
-    responseTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(responseTimer);responseTimer=null;stopAutomaticRecording()}},1000);
-  }catch(e){console.error(e);setStatus('❌ Không thể ghi âm');setPhase('Không thể truy cập microphone.');alert('❌ Không thể bắt đầu ghi âm. Hãy kiểm tra quyền microphone rồi tải lại trang.')}
+try{
+stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg'].find(x=>MediaRecorder.isTypeSupported(x))||'';mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};mediaRecorder.onstop=finishRecording;mediaRecorder.start(250);recording=true;
+setStatus('🔴 Đang ghi âm...');setPhase('Bạn đang trả lời. Hệ thống đang tự động ghi âm.');document.getElementById('wave-'+partIndex).style.visibility='visible';
+let left=Math.max(1,Number(parts[partIndex].response||60));setClock(left);responseTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(responseTimer);responseTimer=null;stopAutomaticRecording()}},1000);
+}catch(e){console.error(e);setStatus('❌ Không thể ghi âm');setPhase('Không thể truy cập microphone.');alert('❌ Không thể bắt đầu ghi âm. Hãy kiểm tra quyền microphone rồi tải lại trang.')}
 }
-function stopAutomaticRecording(){
-  if(!mediaRecorder||mediaRecorder.state==='inactive')return;
-  mediaRecorder.stop();recording=false;
-  if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
-}
+function stopAutomaticRecording(){if(!mediaRecorder||mediaRecorder.state==='inactive')return;mediaRecorder.stop();recording=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
 function finishRecording(){
-  const blob=new Blob(chunks,{type:mediaRecorder?.mimeType||'audio/webm'});
-  partAudio[partIndex]={blob,type:blob.type};
-  document.getElementById('wave-'+partIndex).style.visibility='hidden';
-  setStatus('✅ Đã hoàn thành phần thi');setPhase('Bản ghi đã được lưu tạm. Đang chuyển sang phần tiếp theo...');
-  const step=document.getElementById('step-'+partIndex);if(step)step.className='step done';
-  transitionTimer=setTimeout(()=>nextPart(),1200);
+const blob=new Blob(chunks,{type:mediaRecorder?.mimeType||'audio/webm'});partAudio[partIndex]={blob,type:blob.type};document.getElementById('wave-'+partIndex).style.visibility='hidden';setStatus('✅ Đã hoàn thành phần thi');setPhase('Bản ghi đã được lưu tạm. Đang chuyển sang phần tiếp theo...');const step=document.getElementById('step-'+partIndex);if(step)step.className='step done';transitionTimer=setTimeout(()=>nextPart(),1200);
 }
 async function nextPart(){
-  if(!partAudio[partIndex])return;
-  if(partIndex===parts.length-1){await submitAll();return}
-  document.getElementById('part-'+partIndex).classList.remove('active');
-  partIndex++;
-  document.getElementById('part-'+partIndex).classList.add('active');
-  document.getElementById('step-'+partIndex).className='step active';
-  window.scrollTo({top:0,behavior:'smooth'});
-  runCurrentPart();
+if(!partAudio[partIndex])return;if(partIndex===parts.length-1){await submitAll();return}
+document.getElementById('part-'+partIndex).classList.remove('active');partIndex++;document.getElementById('part-'+partIndex).classList.add('active');document.getElementById('step-'+partIndex).className='step active';window.scrollTo({top:0,behavior:'smooth'});runCurrentPart();
 }
 async function submitAll(){
-  const missing=parts.findIndex((_,i)=>!partAudio[i]);if(missing>=0){alert('Bạn chưa ghi âm Part '+(missing+1)+'.');return}
-  const {data:{session}}=await sb.auth.getSession();if(!session){alert('🔐 Phiên đăng nhập đã hết.');return}
-  const meta=session.user?.user_metadata||{},name=meta.full_name||meta.name||'';
-  setPhase('⏳ Đang nộp bài và tải bản ghi...');
-  const paths={};
-  try{
-    for(let i=0;i<partAudio.length;i++){
-      const item=partAudio[i],ext=item.type.includes('ogg')?'ogg':item.type.includes('mp4')||item.type.includes('m4a')?'m4a':'webm';
-      const path=session.user.id+'/'+exam.id+'/'+crypto.randomUUID()+'_part'+(i+1)+'.'+ext;
-      const up=await sb.storage.from('speaking-audio').upload(path,item.blob,{contentType:item.type||'audio/webm',upsert:false});
-      if(up.error)throw up.error;paths[String(parts[i].part||i+1)] = path;
-    }
-    const row={exam_id:exam.id,student_user_id:session.user.id,student_name:name,audio_paths:paths,status:'submitted'};
-    const ins=await sb.from('speaking_submissions').insert(row).select('id').single();if(ins.error)throw ins.error;
-    app.innerHTML='<div class="card" style="text-align:center"><div style="font-size:48px">🎉</div><h1>Đã nộp bài Speaking!</h1><p class="muted">Các bản ghi âm đã được lưu thành công.</p><div class="notice">🤖 Bước AI chấm điểm sẽ được kết nối ở giai đoạn tiếp theo.</div><button class="btn gray" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>';
-  }catch(e){console.error(e);alert('❌ Không thể nộp bài: '+(e.message||e));setPhase('❌ Nộp bài thất bại.')}
+const missing=parts.findIndex((_,i)=>!partAudio[i]);if(missing>=0){alert('Bạn chưa ghi âm Part '+(missing+1)+'.');return}
+const {data:{session}}=await sb.auth.getSession();if(!session){alert('🔐 Phiên đăng nhập đã hết.');return}
+const meta=session.user?.user_metadata||{},name=meta.full_name||meta.name||'';setPhase('⏳ Đang nộp bài và tải bản ghi...');const paths={};
+try{
+for(let i=0;i<partAudio.length;i++){const item=partAudio[i],ext=item.type.includes('ogg')?'ogg':item.type.includes('mp4')||item.type.includes('m4a')?'m4a':'webm';const path=session.user.id+'/'+exam.id+'/'+crypto.randomUUID()+'_part'+(i+1)+'.'+ext;const up=await sb.storage.from('speaking-audio').upload(path,item.blob,{contentType:item.type||'audio/webm',upsert:false});if(up.error)throw up.error;paths[String(parts[i].part||i+1)]=path}
+const row={exam_id:exam.id,student_user_id:session.user.id,student_name:name,audio_paths:paths,status:'submitted'};const ins=await sb.from('speaking_submissions').insert(row).select('id').single();if(ins.error)throw ins.error;
+app.innerHTML='<div class="card" style="text-align:center"><div style="font-size:48px">🎉</div><h1>Đã nộp bài Speaking!</h1><p class="muted">Các bản ghi âm đã được lưu thành công.</p><div class="notice">🤖 Bước AI chấm điểm sẽ được kết nối ở giai đoạn tiếp theo.</div><button class="btn gray" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>';
+}catch(e){console.error(e);alert('❌ Không thể nộp bài: '+(e.message||e));setPhase('❌ Nộp bài thất bại.')}
 }
 window.startExam=startExam;window.nextPart=nextPart;window.submitAll=submitAll;load();
 </script>
