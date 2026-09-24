@@ -15,7 +15,7 @@
 .prompt{font-size:20px;line-height:1.7;margin:18px 0;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;white-space:pre-wrap}
 .options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.option{border:1px solid #cbd5e1;border-radius:12px;padding:14px;background:#fff}.option b{display:block;margin-bottom:4px}
 .record-box{text-align:center;padding:22px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 18px #0f172a08}.timer{font-size:34px;font-weight:900;color:#2563eb;margin:8px 0}.status{font-weight:800;margin:10px 0}
-.wave{height:48px;display:flex;justify-content:center;align-items:center;gap:3px;margin:12px auto;max-width:300px;opacity:.9}.wave i{display:block;width:4px;height:7px;border-radius:999px;background:#60a5fa;transform-origin:center;animation:voice 1.05s ease-in-out infinite}.wave i:nth-child(2n){animation-delay:-.32s}.wave i:nth-child(3n){animation-delay:-.58s}.wave i:nth-child(4n){animation-delay:-.78s}.wave i:nth-child(5n){animation-delay:-.45s}@keyframes voice{0%,100%{height:7px;opacity:.35}25%{height:17px;opacity:.7}50%{height:34px;opacity:1}75%{height:13px;opacity:.55}}
+.wave{height:48px;display:flex;justify-content:center;align-items:center;gap:3px;margin:12px auto;max-width:300px;opacity:.95}.wave i{display:block;width:4px;height:4px;border-radius:999px;background:#60a5fa;transform-origin:center;transition:height .055s linear,opacity .08s linear}
 .steps{display:flex;gap:7px;flex-wrap:wrap}.step{padding:7px 10px;border-radius:999px;background:#eef2f7;color:#64748b;font-weight:800;font-size:13px}.step.active{background:#dbeafe;color:#1d4ed8}.step.done{background:#dcfce7;color:#166534}
 .notice{padding:14px;border-radius:12px;background:#eff6ff;color:#1e40af;margin:12px 0}.error{background:#fef2f2;color:#991b1b}
 @media(max-width:650px){.options{grid-template-columns:1fr}.prompt{font-size:17px}.timer{font-size:28px}}
@@ -31,7 +31,7 @@ window.addEventListener('unhandledrejection',e=>{console.error(e.reason);if(app&
 const cfg=window.SUPABASE_CONFIG||{};
 if(!window.supabase){app.innerHTML='<div class="card error"><h2>❌ Không tải được thư viện Supabase</h2><p>Trình duyệt chưa tải thư viện kết nối. Hãy tải lại trang.</p><button class="btn gray" onclick="location.reload()">↻ Tải lại</button></div>';throw new Error('Supabase JS unavailable');}
 const sb=window.supabase.createClient(cfg.url,cfg.anonKey);
-let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null,examStarted=false,transitionTimer=null;
+let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null,examStarted=false,transitionTimer=null,audioContext=null,analyser=null,waveData=null,waveFrame=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const id=()=>new URLSearchParams(location.search).get('exam');
 function unwrap(v){if(Array.isArray(v))return v[0]||null;if(v?.data&&Array.isArray(v.data))return v.data[0]||null;if(typeof v==='string'){try{return unwrap(JSON.parse(v))}catch{return null}}return v||null}
@@ -71,11 +71,50 @@ const prep=Math.max(0,Number(parts[partIndex].prep||0));if(prep>0){let left=prep
 async function beginAutomaticRecording(){
 try{
 stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];const mime=['audio/webm;codecs=opus','audio/webm','audio/ogg'].find(x=>MediaRecorder.isTypeSupported(x))||'';mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};mediaRecorder.onstop=finishRecording;mediaRecorder.start(250);recording=true;
+audioContext=new (window.AudioContext||window.webkitAudioContext)();
+if(audioContext.state==='suspended')await audioContext.resume();
+const source=audioContext.createMediaStreamSource(stream);
+analyser=audioContext.createAnalyser();
+analyser.fftSize=64;
+analyser.smoothingTimeConstant=.72;
+source.connect(analyser);
+waveData=new Uint8Array(analyser.fftSize);
+startLiveWave();
 setStatus('🔴 Đang ghi âm...');setPhase('Bạn đang trả lời. Hệ thống đang tự động ghi âm.');document.getElementById('wave-'+partIndex).style.visibility='visible';
 let left=Math.max(1,Number(parts[partIndex].response||60));setClock(left);responseTimer=setInterval(()=>{left--;setClock(left);if(left<=0){clearInterval(responseTimer);responseTimer=null;stopAutomaticRecording()}},1000);
 }catch(e){console.error(e);setStatus('❌ Không thể ghi âm');setPhase('Không thể truy cập microphone.');alert('❌ Không thể bắt đầu ghi âm. Hãy kiểm tra quyền microphone rồi tải lại trang.')}
 }
-function stopAutomaticRecording(){if(!mediaRecorder||mediaRecorder.state==='inactive')return;mediaRecorder.stop();recording=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
+function startLiveWave(){
+  cancelAnimationFrame(waveFrame);
+  const bars=document.querySelectorAll('#wave-'+partIndex+' i');
+  const draw=()=>{
+    if(!analyser||!recording)return;
+    analyser.getByteTimeDomainData(waveData);
+    const n=waveData.length;
+    let sum=0;
+    for(let i=0;i<n;i++){const v=(waveData[i]-128)/128;sum+=v*v}
+    const rms=Math.sqrt(sum/n);
+    const level=Math.min(1,rms*4.8);
+    bars.forEach((bar,i)=>{
+      const center=(bars.length-1)/2;
+      const distance=Math.abs(i-center)/(center||1);
+      const local=level*(1-distance*.38);
+      const jitter=Math.max(0,(Math.sin((performance.now()/90)+i*1.7)+1)*.035);
+      const h=4+Math.min(38,local*42+jitter*20);
+      bar.style.height=h+'px';
+      bar.style.opacity=String(.3+Math.min(.7,local*1.8));
+    });
+    waveFrame=requestAnimationFrame(draw);
+  };
+  waveFrame=requestAnimationFrame(draw);
+}
+function stopLiveWave(){
+  cancelAnimationFrame(waveFrame);waveFrame=null;
+  document.querySelectorAll('.wave i').forEach(b=>{b.style.height='4px';b.style.opacity='.3'});
+  if(audioContext){audioContext.close().catch(()=>{});audioContext=null}
+  analyser=null;waveData=null;
+}
+function stopAutomaticRecording(){if(!mediaRecorder||mediaRecorder.state==='inactive')return;mediaRecorder.stop();recording=false;stopLiveWave();if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
 function finishRecording(){
 const blob=new Blob(chunks,{type:mediaRecorder?.mimeType||'audio/webm'});partAudio[partIndex]={blob,type:blob.type};document.getElementById('wave-'+partIndex).style.visibility='hidden';setStatus('✅ Đã hoàn thành phần thi');setPhase('Bản ghi đã được lưu tạm. Đang chuyển sang phần tiếp theo...');const step=document.getElementById('step-'+partIndex);if(step)step.className='step done';transitionTimer=setTimeout(()=>nextPart(),1200);
 }
