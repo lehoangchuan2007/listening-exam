@@ -22,11 +22,11 @@ audio{width:100%;margin-top:12px}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><h1>🗣️ English Studio — Speaking</h1><div>VSTEP Speaking • Ghi âm bài nói</div></div></header>
-<main class="wrap"><div id="app"><div class="card">⏳ Đang tải đề Speaking...</div></div></main>
+<header class="top"><div class="wrap"><h1>🗣️ English Studio — Speaking</h1><div>VSTEP Speaking • Mô phỏng thi tự động</div></div></header>
+<main class="wrap"><div id="app"><div class="card">⏳ Đang tải đề Speaking...</div></div><button id="submitHidden" style="display:none" aria-hidden="true"></button></main>
 <script>
 const cfg=window.SUPABASE_CONFIG||{},sb=supabase.createClient(cfg.url,cfg.anonKey),app=document.getElementById('app');
-let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null;
+let exam=null,parts=[],partIndex=0,mediaRecorder=null,stream=null,chunks=[],recording=false,partAudio=[],responseTimer=null,prepTimer=null,examStarted=false,transitionTimer=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const id=()=>new URLSearchParams(location.search).get('exam');
 function unwrap(v){if(Array.isArray(v))return v[0]||null;if(v?.data&&Array.isArray(v.data))return v.data[0]||null;if(typeof v==='string'){try{return unwrap(JSON.parse(v))}catch{return null}}return v||null}
@@ -44,8 +44,9 @@ async function load(){
 }
 function render(){
   app.innerHTML='<div class="row"><button class="btn gray" onclick="location.href=\'./student.html\'">← Về thư viện đề</button><div class="muted">🗣️ '+esc(exam.title)+'</div></div>'+
-  '<div class="card"><div class="row"><div><h2>'+esc(exam.title)+'</h2><p class="muted">'+esc(exam.description||'VSTEP Speaking')+'</p></div><span class="part-badge">🎙️ Audio recording</span></div><div class="steps">'+parts.map((p,i)=>'<span class="step '+(i===0?'active':'')+'" id="step-'+i+'">Part '+esc(p.part||i+1)+'</span>').join('')+'</div></div>'+
-  '<div id="parts">'+parts.map((p,i)=>'<section class="part '+(i===0?'active':'')+'" id="part-'+i+'"><span class="part-badge">Part '+esc(p.part||i+1)+'</span><h2>'+esc(p.title||'Speaking')+'</h2><div class="prompt">'+esc(p.prompt)+'</div>'+(p.options.length?'<div class="options">'+p.options.map((o,j)=>'<div class="option"><b>Option '+(j+1)+'</b>'+esc(o)+'</div>').join('')+'</div>':'')+'<div class="record-box"><div class="status" id="status-'+i+'">Sẵn sàng ghi âm</div><div class="timer" id="clock-'+i+'">00:00</div><div class="wave" id="wave-'+i+'" style="visibility:hidden">'+Array.from({length:12},()=>'<i></i>').join('')+'</div><div class="toolbar"><button class="btn" id="record-'+i+'" onclick="toggleRecord()">🔴 Bắt đầu ghi âm</button><button class="btn gray" id="next-'+i+'" onclick="nextPart()" disabled>'+ (i===parts.length-1?'📤 Nộp bài':'➡️ Sang Part tiếp theo')+'</button></div><audio id="audio-'+i+'" controls style="display:none"></audio></div></section>').join('')+'</div>';
+  '<div class="card"><div class="row"><div><h2>'+esc(exam.title)+'</h2><p class="muted">'+esc(exam.description||'VSTEP Speaking')+'</p></div><span class="part-badge">🎙️ Tự động ghi âm</span></div><div class="steps">'+parts.map((p,i)=>'<span class="step '+(i===0?'active':'')+'" id="step-'+i+'">Part '+esc(p.part||i+1)+'</span>').join('')+'</div></div>'+
+  '<div class="card notice" id="intro"><h3>📌 Hướng dẫn</h3><p>Thí sinh không cần bấm nút ghi âm. Khi bắt đầu mỗi phần, hệ thống sẽ tự động chạy thời gian chuẩn bị và tự động ghi âm khi đến thời gian trả lời.</p><p>Hết thời gian trả lời, hệ thống tự dừng ghi âm và chuyển sang phần tiếp theo.</p><button class="btn" id="startExamBtn" onclick="startExam()">▶️ Bắt đầu thi</button></div>'+
+  '<div id="parts" style="display:none">'+parts.map((p,i)=>'<section class="part '+(i===0?'active':'')+'" id="part-'+i+'"><span class="part-badge">Part '+esc(p.part||i+1)+'</span><h2>'+esc(p.title||'Speaking')+'</h2><div class="prompt">'+esc(p.prompt)+'</div>'+(p.options.length?'<div class="options">'+p.options.map((o,j)=>'<div class="option"><b>Option '+(j+1)+'</b>'+esc(o)+'</div>').join('')+'</div>':'')+'<div class="record-box"><div class="status" id="status-'+i+'">Chờ bắt đầu</div><div class="timer" id="clock-'+i+'">00:00</div><div class="wave" id="wave-'+i+'" style="visibility:hidden">'+Array.from({length:12},()=>'<i></i>').join('')+'</div><div class="notice" id="phase-'+i+'">Hệ thống sẽ tự động bắt đầu.</div></div></section>').join('')+'</div>';
 }
 function setStatus(text){const el=document.getElementById('status-'+partIndex);if(el)el.textContent=text}
 function setClock(sec){const el=document.getElementById('clock-'+partIndex);if(!el)return;const m=Math.floor(sec/60),s=String(sec%60).padStart(2,'0');el.textContent=m+':'+s}
@@ -73,10 +74,14 @@ function finishRecording(){
   document.getElementById('next-'+partIndex).disabled=false;document.getElementById('wave-'+partIndex).style.visibility='hidden';setStatus('✅ Bản ghi đã sẵn sàng');
 }
 async function nextPart(){
-  if(!partAudio[partIndex]){alert('Bạn cần ghi âm Part này trước.');return}
+  if(!partAudio[partIndex])return;
   if(partIndex===parts.length-1){await submitAll();return}
-  document.getElementById('part-'+partIndex).classList.remove('active');document.getElementById('step-'+partIndex).className='step done';
-  partIndex++;document.getElementById('part-'+partIndex).classList.add('active');document.getElementById('step-'+partIndex).className='step active';window.scrollTo({top:0,behavior:'smooth'});
+  document.getElementById('part-'+partIndex).classList.remove('active');
+  partIndex++;
+  document.getElementById('part-'+partIndex).classList.add('active');
+  document.getElementById('step-'+partIndex).className='step active';
+  window.scrollTo({top:0,behavior:'smooth'});
+  runCurrentPart();
 }
 async function submitAll(){
   const missing=parts.findIndex((_,i)=>!partAudio[i]);if(missing>=0){alert('Bạn chưa ghi âm Part '+(missing+1)+'.');return}
@@ -96,7 +101,7 @@ async function submitAll(){
     app.innerHTML='<div class="card" style="text-align:center"><div style="font-size:48px">🎉</div><h1>Đã nộp bài Speaking!</h1><p class="muted">Các bản ghi âm đã được lưu thành công.</p><div class="notice">🤖 Bước AI chấm điểm sẽ được kết nối ở giai đoạn tiếp theo.</div><button class="btn gray" onclick="location.href=\'./student.html\'">📚 Về thư viện đề</button></div>';
   }catch(e){console.error(e);alert('❌ Không thể nộp bài: '+(e.message||e));submitBtn.disabled=false;submitBtn.textContent='📤 Nộp bài'}
 }
-window.toggleRecord=toggleRecord;window.nextPart=nextPart;window.submitAll=submitAll;load();
+window.startExam=startExam;window.nextPart=nextPart;window.submitAll=submitAll;load();
 </script>
 </body>
 </html>
