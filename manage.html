@@ -92,7 +92,8 @@ function questionHtml(q={},index=0){const options=Array.isArray(q.options)?q.opt
     async function removeExam(id){if(!confirm("Bạn có chắc muốn xóa đề này không?"))return;const result=await sb.from("exams").delete().eq("id",id);if(result.error)return alert("❌ "+result.error.message);await load();alert("✅ Đã xóa đề.")}
     async function copyLink(id){const link=studentLink(id);try{await navigator.clipboard.writeText(link);alert("✅ Đã sao chép link học sinh.")}catch{prompt("Sao chép link:",link)}}
     function closeModal(){if(localAudioUrl){URL.revokeObjectURL(localAudioUrl);localAudioUrl=""}editingExamId=null;modal.innerHTML=""}
-    window.addQ=addQ;window.removeQ=removeQ;window.syncQ=syncQ;window.importWord=importWord;window.addSpeakingQ=addSpeakingQ;window.removeSpeakingQ=removeSpeakingQ;
+    // Expose handlers explicitly so inline buttons keep working on static hosting.
+    window.createExam=createExam;window.saveExam=saveExam;window.edit=edit;window.duplicate=duplicate;window.removeExam=removeExam;window.copyLink=copyLink;window.addQ=addQ;window.removeQ=removeQ;window.syncQ=syncQ;window.importWord=importWord;window.addSpeakingQ=addSpeakingQ;window.removeSpeakingQ=removeSpeakingQ;
     init();
   </script>
 </body>
