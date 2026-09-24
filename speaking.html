@@ -98,6 +98,16 @@ function finishRecording(){
   const step=document.getElementById('step-'+partIndex);if(step)step.className='step done';
   transitionTimer=setTimeout(()=>nextPart(),1200);
 }
+async function nextPart(){
+  if(!partAudio[partIndex])return;
+  if(partIndex===parts.length-1){await submitAll();return}
+  document.getElementById('part-'+partIndex).classList.remove('active');
+  partIndex++;
+  document.getElementById('part-'+partIndex).classList.add('active');
+  document.getElementById('step-'+partIndex).className='step active';
+  window.scrollTo({top:0,behavior:'smooth'});
+  runCurrentPart();
+}
 async function submitAll(){
   const missing=parts.findIndex((_,i)=>!partAudio[i]);if(missing>=0){alert('Bạn chưa ghi âm Part '+(missing+1)+'.');return}
   const {data:{session}}=await sb.auth.getSession();if(!session){alert('🔐 Phiên đăng nhập đã hết.');return}
