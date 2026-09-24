@@ -36,7 +36,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const id=()=>new URLSearchParams(location.search).get('exam');
 function unwrap(v){if(Array.isArray(v))return v[0]||null;if(v?.data&&Array.isArray(v.data))return v.data[0]||null;if(typeof v==='string'){try{return unwrap(JSON.parse(v))}catch{return null}}return v||null}
 function parse(v){if(Array.isArray(v))return v;if(typeof v==='string'){try{return JSON.parse(v)}catch{return []}}return []}
-function normalizeParts(e){const q=parse(e?.questions);if(q.length)return q.map((x,i)=>({part:x.part||x.section||String(i+1),title:x.title||'',prompt:x.prompt||x.text||x.question||'',options:Array.isArray(x.options)?x.options:[],prep:Number(x.preparation_seconds??x.prep_seconds??x.preparation||0),response:Number(x.response_seconds??x.answer_seconds??x.duration_seconds??x.response||60)}));return []}
+function normalizeParts(e){const q=parse(e?.questions);if(q.length)return q.map((x,i)=>({part:x.part||x.section||String(i+1),title:x.title||'',prompt:x.prompt||x.text||x.question||'',options:Array.isArray(x.options)?x.options:[],prep:Number((x.preparation_seconds??x.prep_seconds??x.preparation)??0),response:Number((x.response_seconds??x.answer_seconds??x.duration_seconds??x.response)??60)}));return []}
 async function load(){
   try{
     if(!window.supabase){throw new Error('Thư viện Supabase chưa tải xong.')}
